@@ -1,0 +1,63 @@
+{
+    "name": "elephantmfa/framework",
+    "description": "The Elephant Mail Filtering Agent Framework",
+    "keywords": [
+        "framework",
+        "elephantmfa",
+        "mfa",
+        "mail",
+        "filtering"
+    ],
+    "license": "MIT",
+    "homepage": "https://elephantmfa.com",
+    "support": {
+        "issues": "https://github.com/elephantmfa/framework/issues",
+        "source": "https://github.com/elephantmfa/framework"
+    },
+    "authors": [
+        {
+            "name": "Marisa Clardy",
+            "email": "marisa@elephantmfa.app"
+        }
+    ],
+    "require": {
+        "php": "^7.2",
+        "react/react": "^1.0",
+        "illuminate/database": "^6.5",
+        "illuminate/pipeline": "^6.5",
+        "monolog/monolog": "^1.12|^2.0",
+        "nesbot/carbon": "^2.0",
+        "symfony/console": "^4.3.4",
+        "symfony/debug": "^4.3.4",
+        "symfony/finder": "^4.3.4",
+        "symfony/process": "^4.3.4",
+        "symfony/var-dumper": "^4.3.4",
+        "vlucas/phpdotenv": "^3.3"
+    },
+    "require-dev": {
+        "fzaninotto/faker": "^1.4",
+        "mockery/mockery": "^1.0",
+        "nunomaduro/collision": "^3.0",
+        "phpunit/phpunit": "^8.0"
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "sort-packages": true
+    },
+    "autoload": {
+        "files": [
+            "src/Elephant/Foundation/helpers.php"
+        ],
+        "psr-4": {
+            "Elephant\\": "src/Elephant"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
