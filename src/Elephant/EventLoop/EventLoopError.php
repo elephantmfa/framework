@@ -3,7 +3,7 @@
 namespace Elephant\EventLoop;
 
 use Exception;
-use Elephant\Contracts\Mail;
+use Elephant\Contracts\Mail\Mail;
 use React\Socket\ConnectionInterface;
 use Illuminate\Contracts\Container\Container;
 
@@ -13,7 +13,7 @@ class EventLoopError
     protected $connection;
     protected $mail;
 
-    public function __construct(Container $app, ConnectionInterface $connection, Mail $mail)
+    public function __construct(Container $app, ConnectionInterface $connection, Mail &$mail)
     {
         $this->app = $app;
         $this->connection = $connection;
