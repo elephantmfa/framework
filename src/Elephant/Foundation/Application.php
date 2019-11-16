@@ -5,6 +5,9 @@ namespace Elephant\Foundation;
 use Closure;
 use RuntimeException;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Env;
+use Illuminate\Support\Str;
+use Illuminate\Support\Collection;
 use Illuminate\Container\Container;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Log\LogServiceProvider;
@@ -70,6 +73,13 @@ class Application extends Container implements ApplicationContract
      * @var array
      */
     protected $loadedProviders = [];
+
+    /**
+     * The deferred services and their providers.
+     *
+     * @var array
+     */
+    protected $deferredServices = [];
 
     /**
      * The custom application path defined by the developer.
@@ -630,22 +640,6 @@ class Application extends Container implements ApplicationContract
     }
 
     /**
-     * Resolve the given type from the container.
-     *
-     * (Overriding Container::make)
-     *
-     * @param  string  $abstract
-     * @param  array  $parameters
-     * @return mixed
-     */
-    public function make($abstract, array $parameters = [])
-    {
-        $abstract = $this->getAlias($abstract);
-
-        return parent::make($abstract, $parameters);
-    }
-
-    /**
      * Determine if the application has booted.
      *
      * @return bool
@@ -958,7 +952,7 @@ class Application extends Container implements ApplicationContract
      */
     public function getCachedConfigPath()
     {
-        return $this->normalizeCachePath('APP_CONFIG_CACHE', 'cache/config.php');
+        return '';
     }
 
     /**
@@ -973,14 +967,116 @@ class Application extends Container implements ApplicationContract
         }
     }
 
+    /**
+     * Load and boot all of the remaining deferred providers.
+     *
+     * @return void
+     */
     public function loadDeferredProviders()
     {
-        // Not implemented
+        // We will simply spin through each of the deferred providers and register each
+        // one and boot them if the application has booted. This should make each of
+        // the remaining services available to this application for immediate use.
+        foreach ($this->deferredServices as $service => $provider) {
+            $this->loadDeferredProvider($service);
+        }
+
+        $this->deferredServices = [];
+    }
+    /**
+     * Set the application's deferred services.
+     *
+     * @param  array  $services
+     * @return void
+     */
+    public function setDeferredServices(array $services)
+    {
+        $this->deferredServices = $services;
     }
 
+    /**
+     * Add an array of services to the application's deferred services.
+     *
+     * @param  array  $services
+     * @return void
+     */
+    public function addDeferredServices(array $services)
+    {
+        $this->deferredServices = array_merge($this->deferredServices, $services);
+    }
+
+    /**
+     * Determine if the given service is a deferred service.
+     *
+     * @param  string  $service
+     * @return bool
+     */
+    public function isDeferredService($service)
+    {
+        return isset($this->deferredServices[$service]);
+    }
+
+    /**
+     * Register a deferred provider and service.
+     *
+     * @param  string  $provider
+     * @param  string|null  $service
+     * @return void
+     */
     public function registerDeferredProvider($provider, $service = null)
     {
-        //Not implemented
+        // Once the provider that provides the deferred service has been registered we
+        // will remove it from our local list of the deferred services with related
+        // providers so that this container does not try to resolve it out again.
+        if ($service) {
+            unset($this->deferredServices[$service]);
+        }
+
+        $this->register($instance = new $provider($this));
+
+        if (!$this->isBooted()) {
+            $this->booting(function () use ($instance) {
+                $this->bootProvider($instance);
+            });
+        }
+    }
+
+    /**
+     * Normalize a relative or absolute path to a cache file.
+     *
+     * @param  string  $key
+     * @param  string  $default
+     * @return string
+     */
+    protected function normalizeCachePath($key, $default)
+    {
+        if (is_null($env = Env::get($key))) {
+            return $this->bootstrapPath($default);
+        }
+
+        return Str::startsWith($env, '/')
+            ? $env
+            : $this->basePath($env);
+    }
+
+    /**
+     * Get the path to the cached packages.php file.
+     *
+     * @return string
+     */
+    public function getCachedPackagesPath()
+    {
+        return $this->normalizeCachePath('APP_PACKAGES_CACHE', 'cache/packages.php');
+    }
+
+    /**
+     * Get the path to the cached services.php file.
+     *
+     * @return string
+     */
+    public function getCachedServicesPath()
+    {
+        return $this->normalizeCachePath('APP_SERVICES_CACHE', 'cache/services.php');
     }
 
     public function routesAreCached()
@@ -1005,17 +1101,6 @@ class Application extends Container implements ApplicationContract
     {
         // Not implemented
         return $path;
-    }
-
-    public function getCachedServicesPath()
-    {
-        // Not implemented
-        return '';
-    }
-    public function getCachedPackagesPath()
-    {
-        // Not implemented
-        return '';
     }
     public function getCachedRoutesPath()
     {
