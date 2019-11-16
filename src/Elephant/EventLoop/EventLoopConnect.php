@@ -42,11 +42,14 @@ class EventLoopConnect
             $connection->write((string) $defer . "\r\n");
         } catch (QuarantineException $quarantine) {
             $mail->setFinalDestination('quarantine');
-            $connection->write('220 ' . $this->app->config['app.greeting_banner'] . "\r\n");
+            $connection->write((string) $quarantine . "\r\n");
         } catch (DropException $drop) {
             $connection->write((string) $drop . "\r\n");
-            $connection->close();
-            return null;
+            $mail->setFinalDestination('drop');
+            if ($drop->getCode() >= 500) {
+                $connection->close();
+                return null;
+            }
         }
         return $mail;
     }
