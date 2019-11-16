@@ -16,6 +16,9 @@ class DropException extends Exception
     public function __construct(string $message = 'Not ok', int $code = 550)
     {
         $this->message = $message;
+        if ($code < 500 && $code >= 300) {
+            $code = 550;
+        }
         $this->code = $code;
     }
 

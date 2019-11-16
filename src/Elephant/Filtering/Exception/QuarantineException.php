@@ -16,6 +16,9 @@ class QuarantineException extends Exception
     public function __construct(string $message = 'Ok', int $code = 250)
     {
         $this->message = $message;
+        if ($code >= 300 && $code < 400) {
+            $code = 250;
+        }
         $this->code = $code;
     }
 

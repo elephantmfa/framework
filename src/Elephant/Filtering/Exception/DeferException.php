@@ -13,9 +13,12 @@ class DeferException extends Exception
      * @param int $code
      * @return void
      */
-    public function __construct(string $message = 'Server Configuration Problem', int $code = 450)
+    public function __construct(string $message = 'Try again later', int $code = 450)
     {
         $this->message = $message;
+        if ($code < 400 || $code >= 500) {
+            $code = 450;
+        }
         $this->code = $code;
     }
 
