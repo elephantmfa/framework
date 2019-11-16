@@ -2,11 +2,11 @@
 
 namespace Elephant\EventLoop;
 
-use Elephant\Contracts\Mail;
 use React\EventLoop\Factory;
 use Illuminate\Support\ServiceProvider;
 use React\Socket\ConnectionInterface;
 use React\Socket\Server;
+use RuntimeException;
 
 class EventLoopServiceProvider extends ServiceProvider
 {
@@ -21,9 +21,13 @@ class EventLoopServiceProvider extends ServiceProvider
             return Factory::create();
         });
 
-        $this->app->bind('server', function ($app, $port, $filters) {
-            $port = $port ?? $app->config['app.ports.inbound'];
-            $server = new Server($app->config['app.ports.inbound'], $app['loop']);
+        $this->app->bind('server', function ($app, $params) {
+            $port = $params['port'];
+            if (! isset($port)) {
+                throw new RuntimeException('No port provided to listen on.');
+            }
+            $filters = $params['filters'] ?? [];
+            $server = new Server($port, $app['loop']);
 
             $server->on('connection', function (ConnectionInterface $connection) use ($app, $filters) {
                 $cb = new EventLoopConnect($app, $filters);
