@@ -36,6 +36,7 @@
         "illuminate/hashing": "^6.5",
         "illuminate/log": "^6.5",
         "illuminate/pipeline": "^6.5",
+        "league/flysystem": "^1.0",
         "monolog/monolog": "^1.12|^2.0",
         "nesbot/carbon": "^2.0",
         "opis/closure": "^3.1",
