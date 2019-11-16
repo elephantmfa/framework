@@ -13,6 +13,7 @@ class Mail implements MailContract
 
     public function __construct()
     {
-        //
+        $this->connection = new Connection();
+        $this->envelope = new Envelope();
     }
 }
