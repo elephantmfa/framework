@@ -1,6 +1,6 @@
 <?php
 
-namespace Elephant\Contracts;
+namespace Elephant\Contracts\Mail;
 
 interface Mail
 {
