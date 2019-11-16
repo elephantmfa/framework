@@ -1,6 +1,6 @@
 <?php
 
-namespace Illuminate\Foundation;
+namespace Elephant\Foundation;
 
 class AliasLoader
 {

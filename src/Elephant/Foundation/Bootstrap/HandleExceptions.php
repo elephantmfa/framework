@@ -1,10 +1,10 @@
 <?php
 
-namespace Illuminate\Foundation\Bootstrap;
+namespace Elephant\Foundation\Bootstrap;
 
 use ErrorException;
 use Exception;
-use Illuminate\Contracts\Debug\ExceptionHandler;
+use Elephant\Contracts\Debug\ExceptionHandler;
 use Illuminate\Contracts\Foundation\Application;
 use Symfony\Component\Console\Output\ConsoleOutput;
 use Symfony\Component\Debug\Exception\FatalErrorException;
@@ -145,7 +145,12 @@ class HandleExceptions
     protected function fatalExceptionFromError(array $error, $traceOffset = null)
     {
         return new FatalErrorException(
-            $error['message'], $error['type'], 0, $error['file'], $error['line'], $traceOffset
+            $error['message'],
+            $error['type'],
+            0,
+            $error['file'],
+            $error['line'],
+            $traceOffset
         );
     }
 
