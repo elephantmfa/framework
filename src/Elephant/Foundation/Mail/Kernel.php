@@ -2,7 +2,6 @@
 
 namespace Elephant\Foundation\Mail;
 
-use React\EventLoop\LoopInterface;
 use Elephant\Foundation\Application;
 use Elephant\Contracts\Mail\Kernel as KernelContract;
 
@@ -23,7 +22,7 @@ class Kernel implements KernelContract
     protected $bootstrappers = [
         \Elephant\Foundation\Bootstrap\LoadEnvironmentVariables::class,
         \Elephant\Foundation\Bootstrap\LoadConfiguration::class,
-        \Elephant\Foundation\Bootstrap\HandleExceptions::class,
+        // \Elephant\Foundation\Bootstrap\HandleExceptions::class,
         \Elephant\Foundation\Bootstrap\RegisterFacades::class,
         \Elephant\Foundation\Bootstrap\RegisterProviders::class,
         \Elephant\Foundation\Bootstrap\BootProviders::class,
@@ -85,10 +84,23 @@ class Kernel implements KernelContract
 
     public function handle()
     {
-        $servers = [];
-        foreach ($this->app->config['app.ports'] as $name => $port) {
-            $servers[] = $this->app->make('server', $port, $this->filters);
+        $this->bootstrap();
+
+        if ($this->PIDExists()) {
+            die($this->app->config['app.name'] . " is already running.\n");
         }
+
+        $servers = [];
+
+        foreach ($this->app->config['app.ports'] as $name => $port) {
+            $servers[] = $this->app->make('server', [
+                'port' => $port,
+                'filters' => $this->filters,
+            ]);
+        }
+
+        $this->writePID();
+
         $this->app['loop']->run();
     }
 
@@ -145,5 +157,33 @@ class Kernel implements KernelContract
     public function getApplication()
     {
         return $this->app;
+    }
+
+    /**
+     * Writes the PID out to a PID file.
+     */
+    public function writePID()
+    {
+        $this->app['filesystem']->disk('tmp')->put('pid', getmypid());
+    }
+
+    /**
+     * Gets the PID from the PID file
+     *
+     * @return int
+     */
+    public function getPID(): int
+    {
+        return (int) $this->app['filesystem']->disk('tmp')->get('pid');
+    }
+
+    /**
+     * Gets the PID from the PID file
+     *
+     * @return bool
+     */
+    public function PIDExists(): bool
+    {
+        return $this->app['filesystem']->disk('tmp')->exists('pid');
     }
 }
