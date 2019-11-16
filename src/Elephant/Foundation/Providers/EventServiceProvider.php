@@ -1,6 +1,6 @@
 <?php
 
-namespace Illuminate\Foundation\Support\Providers;
+namespace Elephant\Foundation\Providers;
 
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
@@ -58,15 +58,6 @@ class EventServiceProvider extends ServiceProvider
      */
     public function getEvents()
     {
-        if ($this->app->eventsAreCached()) {
-            $cache = require $this->app->getCachedEventsPath();
-
-            return $cache[get_class($this)] ?? [];
-        } else {
-            return array_merge_recursive(
-                $this->discoveredEvents(),
-                $this->listens()
-            );
-        }
+        return $this->listens();
     }
 }
