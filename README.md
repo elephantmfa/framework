@@ -1,4 +1,4 @@
-<p align="center"><a href="https://elephantmfa.app"><img src="https://github.com/elephantmfa/docs/blob/master/images/logo.svg"></a></p>
+<p align="center"><a href="https://elephantmfa.app"><img width="150px" height="150px" src="https://github.com/elephantmfa/docs/blob/master/images/logo.svg"></a></p>
 <p align="center">
 <a href="https://packagist.org/packages/elephantmfa/framework"><img alt="Total Downloads" src="https://poser.pugx.org/phpunit/phpunit/downloads"></a>
 <a href="https://packagist.org/packages/elephantmfa/framework"><img alt="Latest Stable Version" src="https://poser.pugx.org/elephantmfa/framework/version"></a>
