@@ -132,7 +132,7 @@ class Application extends Container implements ApplicationContract
     protected $namespace;
 
     /**
-     * Create a new Illuminate application instance.
+     * Create a new Elephant application instance.
      *
      * @param  string|null  $basePath
      * @return void
