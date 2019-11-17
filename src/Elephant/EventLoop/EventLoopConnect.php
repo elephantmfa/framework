@@ -2,7 +2,7 @@
 
 namespace Elephant\EventLoop;
 
-use Elephant\Contracts\Mail;
+use Elephant\Contracts\Mail\Mail;
 use Elephant\EventLoop\Traits\CommunicateTrait;
 use Elephant\Filtering\Exception\DeferException;
 use Elephant\Filtering\Exception\DropException;

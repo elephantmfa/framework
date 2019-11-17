@@ -14,7 +14,7 @@ class MailServiceProvider extends ServiceProvider
     public function register()
     {
         $this->app->bind(
-            \Elephant\Contracts\Mail::class,
+            \Elephant\Contracts\Mail\Mail::class,
             \Elephant\Mail\Mail::class
         );
     }

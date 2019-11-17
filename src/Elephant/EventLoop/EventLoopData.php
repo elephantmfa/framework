@@ -82,16 +82,17 @@ class EventLoopData
      */
     public function __invoke($data)
     {
+        if (substr_count($data, "\r\n") > 1) {
+            $chunks = explode("\r\n", $data);
+            foreach ($chunks as $chunk) {
+                $this->__invoke("$chunk\r\n");
+            }
+
+            return;
+        }
         if ($this->readMode) {
             $data = str_replace("\r\n", "\n", $data);
-            if (substr_count($data, "\n")) {
-                $chunks = explode("\n", $data);
-                foreach ($chunks as $chunk) {
-                    $this->handleData("$chunk\n");
-                }
-            } else {
-                $this->handleData($data);
-            }
+            $this->handleData($data);
             if ($this->app->config['app.debug']) {
                 dump($data, $this->mail);
             }
@@ -173,7 +174,7 @@ class EventLoopData
      */
     protected function handleReset(string $data)
     {
-        $nmail = $this->app[Mail::class];
+        $nmail = $this->app->make(Mail::class);
         $nmail->connection = $this->mail->connection;
         $nmail->envelope->helo = $this->mail->envelope->helo;
         $this->mail = $nmail;
@@ -208,16 +209,18 @@ class EventLoopData
         $helo_parts = explode(' ', $helo, 2);
         $this->mail->envelope->helo = $helo_parts[1] ?? '';
         $this->handleWrapper(function () use ($helo) {
+            $localAddr = $this->connection->getLocalAddress();
             $this->mail = (new Pipeline($this->app))
                 ->send($this->mail)
                 ->via('filter')
                 ->through($this->filters['helo'] ?? [])
                 ->thenReturn();
             if (Str::startsWith(strtolower($helo), 'helo')) {
-                $this->say('250 ' . config('app.name'));
+                $this->say('250 ' . config('app.name', $localAddr));
             } else {
-                $this->say('250-' . config('app.name'))
+                $this->say('250-' . config('app.name', $localAddr))
                     ->say("250-ENHANCEDSTATUSCODES")
+                    ->say("250-PIPELINING")
                     ->say("250 XFORWARD");
             }
         });
