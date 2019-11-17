@@ -45,11 +45,13 @@ trait InteractsWithEventLoop
         $this->app->loop->stop();
     }
 
-    protected function speak($message)
+    protected function speak($message, $read = true)
     {
         fwrite($this->client, "$message\r\n");
 
-        $this->tick()->lastResponse = trim(fread($this->client, 4096), "\r\n");
+        if ($read) {
+            $this->tick()->lastResponse = trim(fread($this->client, 4096), "\r\n");
+        }
         
         return $this;
     }

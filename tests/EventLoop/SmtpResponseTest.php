@@ -58,18 +58,18 @@ class SmtpResponseTest extends TestCase
     /** @test */
     function it_has_valid_data_response()
     {
-        $this->speak('HELO test.com')
-            ->speak('MAIL FROM: <test@test.com>')
-            ->speak('RCPT TO: <test@test.com>')
+        $this->speak('HELO test.com', false)
+            ->speak('MAIL FROM: <test@test.com>', false)
+            ->speak('RCPT TO: <test@test.com>', false)
             ->speak('DATA')
             ->assert3XXResponse()
-            ->speak('From: test <test@test.com>')
-            ->speak('To: test <test@test.com>')
-            ->speak('Subject: Test')
-            ->speak('')
-            ->speak('Test')
-            ->speak('')
-            ->speak('.')
+            ->speak('From: test <test@test.com>', false)
+            ->speak('To: test <test@test.com>', false)
+            ->speak('Subject: Test', false)
+            ->speak('', false)
+            ->speak('Test', false)
+            ->speak('', false)
+            ->speak('.', false)
             ->speak('')
             ->assert2XXResponse();
     }
@@ -106,6 +106,13 @@ class SmtpResponseTest extends TestCase
     function it_has_valid_response_when_quit_sent()
     {
         $this->speak('QUIT')
+            ->assert2XXResponse();
+    }
+
+    /** @test */
+    function it_allows_for_pipelining()
+    {
+        $this->speak("HELO me.com\r\nMAIL FROM: <test@test.com>")
             ->assert2XXResponse();
     }
 }
