@@ -413,9 +413,9 @@ class EventLoopData
     {
         $queueId = md5(
             strtoupper(Str::random()) .
-            Carbon::now()->toDateTime() .
+            Carbon::now()->toString() .
             $this->mail->envelope->helo .
-            $this->mail->connection->source_ip .
+            $this->mail->connection->sender_ip .
             $this->mail->envelope->sender
         );
 
@@ -428,7 +428,7 @@ class EventLoopData
 
         // If queueing is enabled, we need to store the mail in the queue for
         //   later processing.
-        $this->app->filesystem->put("queue/$queueId", $this->mail->raw);
+        $this->app->filesystem->disk('tmp')->put("queue/$queueId", $this->mail->raw);
         // @todo Add to queue using queue driver so that queues can be processed.
 
         return $queueId;
