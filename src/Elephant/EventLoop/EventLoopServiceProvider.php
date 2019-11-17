@@ -34,8 +34,8 @@ class EventLoopServiceProvider extends ServiceProvider
                 $mail = $cb($connection);
                 $connection->on('data', new EventLoopData($app, $connection, $mail, $filters));
                 $connection->on('error', new EventLoopError($app, $connection, $mail));
-                $connection->on('end', new EventLoopClose($app, $connection));
-                $connection->on('close', new EventLoopTerminate($app, $connection));
+                $connection->on('close', new EventLoopClose($app, $connection));
+                $connection->on('end', new EventLoopTerminate($app, $connection));
             });
 
             return $server;
