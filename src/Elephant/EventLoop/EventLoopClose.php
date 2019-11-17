@@ -2,13 +2,15 @@
 
 namespace Elephant\EventLoop;
 
+use Elephant\EventLoop\Traits\CommunicateTrait;
 use React\Socket\ConnectionInterface;
 use Illuminate\Contracts\Container\Container;
 
 class EventLoopClose
 {
+    use CommunicateTrait;
+    
     protected $app;
-    protected $connection;
 
     public function __construct(Container $app, ConnectionInterface $connection)
     {
@@ -18,6 +20,6 @@ class EventLoopClose
 
     public function __invoke()
     {
-        //
+        $this->say('221 2.0.0 Goodbye');
     }
 }
