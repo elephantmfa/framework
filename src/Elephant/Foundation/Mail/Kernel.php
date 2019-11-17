@@ -62,7 +62,6 @@ class Kernel implements KernelContract
      */
     protected $dataFilters = [ ];
 
-
     /**
      * A list of filters to apply to queued mail.
      *
@@ -70,9 +69,17 @@ class Kernel implements KernelContract
      */
     protected $queuedFilters = [ ];
 
+    /**
+     * The PID of the elephant process.
+     *
+     * @var int
+     */
+    protected $pid;
+
     public function __construct(Application $app)
     {
         $this->app = $app;
+        $this->pid = getmypid();
     }
 
     public function bootstrap()
@@ -80,6 +87,18 @@ class Kernel implements KernelContract
         if (!$this->app->hasBeenBootstrapped()) {
             $this->app->bootstrapWith($this->bootstrappers());
         }
+
+        $this->app->addTerminatingCallback(function () {
+            $this->app->loop->stop();
+        });
+        $this->app->addTerminatingCallback(function () {
+            $this->removePID();
+        });
+
+        $this->app->loop->addSignal(SIGINT, function (int $signal) {
+            $this->terminate();
+            die("\nClosing " . $this->app->config['app.name'] . " [{$this->pid}].\n");
+        });
     }
 
     public function handle()
@@ -92,7 +111,7 @@ class Kernel implements KernelContract
 
         $servers = [];
 
-        foreach ($this->app->config['app.ports'] as $name => $port) {
+        foreach ($this->app->config['relay.ports'] as $name => $port) {
             $servers[] = $this->app->make('server', [
                 'port' => $port,
                 'filters' => $this->filters,
@@ -101,7 +120,7 @@ class Kernel implements KernelContract
 
         $this->writePID();
 
-        $this->app['loop']->run();
+        $this->app->loop->run();
     }
 
     /**
@@ -161,10 +180,22 @@ class Kernel implements KernelContract
 
     /**
      * Writes the PID out to a PID file.
+     * 
+     * @return void
      */
     public function writePID()
     {
-        $this->app['filesystem']->disk('tmp')->put('pid', getmypid());
+        $this->app['filesystem']->disk('tmp')->put('pid', $this->pid);
+    }
+
+    /**
+     * Writes the PID out to a PID file.
+     * 
+     * @return void
+     */
+    public function removePID()
+    {
+        $this->app['filesystem']->disk('tmp')->delete('pid');
     }
 
     /**
