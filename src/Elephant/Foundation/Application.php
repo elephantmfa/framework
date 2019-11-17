@@ -61,6 +61,14 @@ class Application extends Container implements ApplicationContract
     protected $bootedCallbacks = [];
 
     /**
+     * The array of terminating callbacks.
+     *
+     * @var callable[]
+     */
+    protected $terminatingCallbacks = [];
+
+
+    /**
      * All of the registered service providers.
      *
      * @var \Illuminate\Support\ServiceProvider[]
@@ -953,6 +961,17 @@ class Application extends Container implements ApplicationContract
     public function getCachedConfigPath()
     {
         return '';
+    }
+
+    /**
+     * Adds a terminating callback.
+     *
+     * @param callable $callback
+     * @return void
+     */
+    public function addTerminatingCallback($callback)
+    {
+        $this->terminatingCallbacks[] = $callback;
     }
 
     /**
