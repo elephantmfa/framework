@@ -57,6 +57,13 @@ class EventLoopData
     protected $readingBody = false;
 
     /**
+     * Whether or not the mail messages is likely ending.
+     *
+     * @var boolean
+     */
+    protected $endingMail = false;
+
+    /**
      * Builds the event loop data invokable class.
      *
      * @param \Illuminate\Contracts\Container\Container $app
@@ -110,7 +117,7 @@ class EventLoopData
         } elseif (Str::startsWith($lcData, ['xforward'])) {
             $this->handleXForward($data);
         } elseif (Str::startsWith($lcData, ['data'])) {
-            if (count($this->mail->envelope->recipients) < 1) {
+            if (count($this->mail->getRecipients()) < 1) {
                 $this->say('503 5.5.1 Error: need RCPT command');
 
                 return;
@@ -175,8 +182,8 @@ class EventLoopData
     protected function handleReset(string $data)
     {
         $nmail = $this->app->make(Mail::class);
-        $nmail->connection = $this->mail->connection;
-        $nmail->envelope->helo = $this->mail->envelope->helo;
+        $nmail->setConnection($this->mail->getConnection());
+        $nmail->setHelo($this->mail->getHelo() ?? '');
         $this->mail = $nmail;
         $this->say('250 2.0.0 Ok');
     }
@@ -202,12 +209,12 @@ class EventLoopData
     {
         if (! empty($this->mail->envelope->sender)) {
             $nmail = $this->app[Mail::class];
-            $nmail->connection = $this->mail->connection;
-            $nmail->envelope->helo = $this->mail->envelope->helo;
+            $nmail->setConnection($this->mail->getConnection());
+            $nmail->setHelo($this->mail->getHelo() ?? '');
             $this->mail = $nmail;
         }
         $helo_parts = explode(' ', $helo, 2);
-        $this->mail->envelope->helo = $helo_parts[1] ?? '';
+        $this->mail->setHelo($helo_parts[1] ?? '');
         $this->handleWrapper(function () use ($helo) {
             $localAddr = $this->connection->getLocalAddress();
             $this->mail = (new Pipeline($this->app))
@@ -240,7 +247,7 @@ class EventLoopData
             return;
         }
         $from_parts = explode(': ', $envelope_from, 2);
-        $this->mail->envelope->sender = trim($from_parts[1] ?? '', '<>');
+        $this->mail->setSender($from_parts[1] ?? '');
         $this->handleWrapper(function () {
             $this->mail = (new Pipeline($this->app))
                 ->send($this->mail)
@@ -265,7 +272,7 @@ class EventLoopData
             return;
         }
         $to_parts = explode(': ', $envelope_to, 2);
-        $this->mail->envelope->recipients[] = trim($to_parts[1] ?? '', '<>');
+        $this->mail->addRecipient($to_parts[1] ?? '');
         $this->handleWrapper(function () {
             $this->mail = (new Pipeline($this->app))
                 ->send($this->mail)
@@ -294,16 +301,16 @@ class EventLoopData
             $val = trim($val);
             switch ($attr) {
                 case 'helo':
-                    $this->mail->envelope->helo = $val;
+                    $this->mail->setHelo($val);
                     break;
                 case 'addr':
-                    $this->mail->connection->sender_ip = $val;
+                    $this->mail->setSenderIp($val);
                     break;
                 case 'proto':
-                    $this->mail->connection->protocol = $val;
+                    $this->mail->setProtocol($val);
                     break;
                 case 'name':
-                    $this->mail->connection->sender_name = $val;
+                    $this->mail->setSenderName($val);
                     break;
                 case 'ident':
                 case 'source':
@@ -354,9 +361,11 @@ class EventLoopData
      */
     protected function handleData(string $data)
     {
-        $this->mail->raw .= $data;
+        $this->mail->appendToRaw($data);
         if (! $this->readingBody) { // reading headers
-            if (empty(trim($data))) {
+            if (Str::startsWith($data, '--' . $this->mail->getMimeBoundary() ?? '--') &&
+                empty(trim($this->currentLine))
+            ) {
                 if (! empty($this->currentLine)) {
                     $this->addHeader();
                 }
@@ -378,7 +387,10 @@ class EventLoopData
 
             return;
         }
-        if (empty(trim($data))) {
+        if (trim($data) == "--{$this->mail->getMimeBoundary()}--") {
+            $this->endingMail = true;
+        }
+        if ($this->endingMail && empty(trim($data))) {
             if (substr_count($this->currentLine, '.') > 0) {
                 $this->readingBody = false;
                 $this->readMode = false;
@@ -392,9 +404,11 @@ class EventLoopData
                     $queueId = $this->sendToQueue();
                     $this->say("250 2.0.0 Ok: queued as $queueId");
                 });
+
+                return;
             }
             if (! empty($this->currentLine)) {
-                $this->mail->bodyParts[] = $this->currentLine;
+                $this->mail->attachRaw($this->currentLine);
             }
             $this->currentLine = '';
 
@@ -411,15 +425,15 @@ class EventLoopData
      */
     protected function sendToQueue()
     {
-        $queueId = md5(
+        $queueId = sha1(
             strtoupper(Str::random()) .
             Carbon::now()->toString() .
-            $this->mail->envelope->helo .
-            $this->mail->connection->sender_ip .
-            $this->mail->envelope->sender
+            $this->mail->getHelo() .
+            $this->mail->getSenderIp() .
+            $this->mail-getSender()
         );
 
-        $this->mail->queue_id = $queueId;
+        $this->mail->setQueueId($queueId);
 
         // First, let's check if queuing is disabled, and handle that upfront.
         if ($this->app->config['relay.queue_processor'] == 'none') {
@@ -428,7 +442,7 @@ class EventLoopData
 
         // If queueing is enabled, we need to store the mail in the queue for
         //   later processing.
-        $this->app->filesystem->disk('tmp')->put("queue/$queueId", $this->mail->raw);
+        $this->app->filesystem->disk('tmp')->put("queue/$queueId", $this->mail->getRaw());
         // @todo Add to queue using queue driver so that queues can be processed.
 
         return $queueId;
@@ -475,6 +489,11 @@ class EventLoopData
     {
         if (preg_match('/^(.+): (.+)$/', $this->currentLine, $matches)) {
             [, $header, $value] = $matches;
+            if (strtolower($header) == 'content-type') {
+                if (preg_match('/boundary=["\'](.*)["\']/', $value)) {
+                    $this->mail->setMimeBoundary($matches[1]);
+                }
+            }
             $this->mail->headers[strtolower($header)][] = $value;
         }
     }

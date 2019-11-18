@@ -31,11 +31,11 @@ class EventLoopConnect
         $mail = $this->app->make(Mail::class);
         $port = explode(':', $connection->getLocalAddress())[2];
         if (preg_match(';^tcp://(.+):\d+$;', $connection->getRemoteAddress(), $matches)) {
-            $mail->connection->sender_ip = $matches[1];
+            $mail->setSenderIp($matches[1]);
         }
-        $mail->connection->received_port = $port;
-        $mail->connection->protocol = 'SMTP';
-        $mail->connection->sender_name = '[UNKNOWN]';
+        $mail->getConnection()->receivedPort = $port;
+        $mail->setProtocol('SMTP');
+        $mail->setSenderName('[UNKNOWN]');
         try {
             $mail = (new Pipeline($this->app))
                 ->send($mail)
