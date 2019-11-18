@@ -71,7 +71,7 @@ if (! function_exists('dd')) {
     }
 }
 
-if (!function_exists('storage_path')) {
+if (! function_exists('storage_path')) {
     /**
      * Get the path to the storage folder.
      *
@@ -84,7 +84,7 @@ if (!function_exists('storage_path')) {
     }
 }
 
-if (!function_exists('database_path')) {
+if (! function_exists('database_path')) {
     /**
      * Get the database path.
      *
@@ -94,5 +94,69 @@ if (!function_exists('database_path')) {
     function database_path($path = '')
     {
         return app()->databasePath($path);
+    }
+}
+
+if (! function_exists('validate_ip')) {
+    /**
+     * Verify that an IP or IP:port are valid.
+     *
+     * @param string $ip
+     * @param bool $ipv6
+     * @return boolean
+     */
+    function validate_ip(string $ip, bool $ipv6 = false): bool
+    {
+        if ($ipv6) {
+            $match = preg_match('/(\[[a-fA-F0-9:]{3,39}\])(:\d+)/', $ip, $matches);
+            if ($match === false) {
+                return false;
+            }
+            if (count($matches) > 0) {
+                [, $ip, $port] = $matches;
+                if (!is_int($port)) {
+                    return false;
+                }
+            }
+
+            return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6);
+        }
+        if (preg_match('/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?/', $ip) === false) {
+            return false;
+        }
+        if (substr_count($ip, ':') == 1) {
+            // In this case, we are likely an IPv4 address with a port.
+            [$ip, $port] = explode(':', $ip, 2);
+            if (! is_int($port)) {
+                return false;
+            }
+        }
+
+        return filter_var($ip, FILTER_VALIDATE_IP);
+    }
+}
+
+if (! function_exists('fold_header')) {
+    /**
+     * Folds a header value to be no more than 78 characters long.
+     *
+     * @param string $headerVal
+     * @param int $numSpaces = 4
+     * @return string
+     */
+    function fold_header(string $headerVal, int $numSpaces = 4): string
+    {
+        if (preg_match('/^(.{68,78})\s+(.+)$/', $headerVal, $matches) !== false) {
+            [, $p1, $p2] = $matches;
+            $headerVal = "{$p1}\n";
+            for ($i=0; $i < $numSpaces; $i++) {
+                $headerVal .= ' ';
+            }
+            if (strlen($p2) > 78) {
+                $p2 = fold_header($p2, $numSpaces);
+            }
+            $headerVal .= $p2;
+        }
+        return $headerVal;
     }
 }
