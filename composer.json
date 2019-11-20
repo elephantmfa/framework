@@ -55,6 +55,7 @@
         "elephantmfa/foundation": "self.version",
         "elephantmfa/filtering": "self.version",
         "elephantmfa/mail": "self.version",
+        "elephantmfa/async": "self.version",
         "elephantmfa/contracts": "self.version"
     },
     "require-dev": {
