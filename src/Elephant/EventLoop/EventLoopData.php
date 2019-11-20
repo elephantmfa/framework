@@ -89,14 +89,30 @@ class EventLoopData
      */
     public function __invoke($data)
     {
-        if (substr_count($data, "\r\n") > 1) {
-            $chunks = explode("\r\n", $data);
+        if (substr_count($data, "\n") > 1) {
+            $chunks = explode("\n", $data);
+
+            $this->mail->supplementalData['pipelining_in_use'] = true;
+
             foreach ($chunks as $chunk) {
-                $this->__invoke("$chunk\r\n");
+                $chunk = rtrim($chunk, "\r");
+                $this->handle("$chunk\r\n");
             }
 
             return;
         }
+
+        $this->handle($data);
+    }
+
+    /**
+     * Handle the processing.
+     *
+     * @param string $data
+     * @return void
+     */
+    protected function handle(string $data)
+    {
         if ($this->readMode) {
             $data = str_replace("\r\n", "\n", $data);
             $this->handleData($data);
@@ -110,13 +126,18 @@ class EventLoopData
         $lcData = strtolower($data);
         if (Str::startsWith($lcData, ['helo', 'ehlo'])) {
             $this->handleHelo($data);
-        } elseif (Str::startsWith($lcData, ['mail from:'])) {
+        } elseif (Str::startsWith($lcData, ['mail from'])) {
             $this->handleMailFrom($data);
-        } elseif (Str::startsWith($lcData, ['rcpt to:'])) {
+        } elseif (Str::startsWith($lcData, ['rcpt to'])) {
             $this->handleRcptTo($data);
         } elseif (Str::startsWith($lcData, ['xforward'])) {
             $this->handleXForward($data);
         } elseif (Str::startsWith($lcData, ['data'])) {
+            if ($lcData !== 'data') {
+                $this->say('501 5.5.4 Syntax: DATA');
+
+                return;
+            }
             if (count($this->mail->getRecipients()) < 1) {
                 $this->say('503 5.5.1 Error: need RCPT command');
 
@@ -132,6 +153,8 @@ class EventLoopData
             $this->handleNoop($data);
         } elseif (Str::startsWith($lcData, ['vrfy'])) {
             $this->handleVerify($data);
+        } elseif (Str::startsWith($lcData, ['starttls'])) {
+            $this->handleTls($data);
         } elseif (!empty($data)) {
             $this->handleUnknownCommand($data);
         }
@@ -174,6 +197,17 @@ class EventLoopData
     }
 
     /**
+     * Handle the `STARTTLS` SMTP command.
+     *
+     * @param string $data
+     * @return void
+     */
+    protected function handleTls(string $data)
+    {
+        $this->say('502 5.5.1 STARTTLS not yet implemented');
+    }
+
+    /**
      * Handle the `RSET` SMTP command.
      *
      * @param string $data
@@ -207,7 +241,8 @@ class EventLoopData
      */
     protected function handleHelo(string $helo)
     {
-        if (! empty($this->mail->envelope->sender)) {
+        $time = microtime(true);
+        if (! empty($this->mail->getSender())) {
             $nmail = $this->app[Mail::class];
             $nmail->setConnection($this->mail->getConnection());
             $nmail->setHelo($this->mail->getHelo() ?? '');
@@ -228,9 +263,12 @@ class EventLoopData
                 $this->say('250-' . config('app.name', $localAddr))
                     ->say("250-ENHANCEDSTATUSCODES")
                     ->say("250-PIPELINING")
+                    ->say('250-SMTPUTF8')
+                    ->say('250-8BITMIME')
                     ->say("250 XFORWARD");
             }
         });
+        $this->mail->timings['helo'] = microtime(true) - $time;
     }
 
     /**
@@ -241,11 +279,19 @@ class EventLoopData
      */
     protected function handleMailFrom(string $envelope_from)
     {
-        if (empty($this->mail->envelope->helo)) {
+        $time = microtime(true);
+        if (empty($this->mail->getHelo())) {
             $this->say('503 5.5.1 Error: send HELO/EHLO first');
 
             return;
         }
+
+        if (strpos($envelope_from, ':') === false) {
+            $this->say('501 5.5.4 Syntax: MAIL FROM:<address>');
+
+            return;
+        }
+
         $from_parts = explode(': ', $envelope_from, 2);
         $this->mail->setSender($from_parts[1] ?? '');
         $this->handleWrapper(function () {
@@ -256,6 +302,7 @@ class EventLoopData
                 ->thenReturn();
             $this->say('250 2.1.0 Ok');
         });
+        $this->mail->timings['mail_from'] = microtime(true) - $time;
     }
 
     /**
@@ -266,11 +313,19 @@ class EventLoopData
      */
     protected function handleRcptTo(string $envelope_to)
     {
-        if (empty($this->mail->envelope->sender)) {
+        $time = microtime(true);
+        if (empty($this->mail->getSender())) {
             $this->say('503 5.5.1 Error: need MAIL command');
 
             return;
         }
+        
+        if (strpos($envelope_to, ':') === false) {
+            $this->say('501 5.5.4 Syntax: RCPT TO:<address>');
+
+            return;
+        }
+
         $to_parts = explode(': ', $envelope_to, 2);
         $this->mail->addRecipient($to_parts[1] ?? '');
         $this->handleWrapper(function () {
@@ -281,11 +336,13 @@ class EventLoopData
                 ->thenReturn();
             $this->say('250 2.1.5 Ok');
         });
+        $this->mail->timings['rcpt_to'] = microtime(true) - $time;
     }
 
     protected function handleXForward(string $xforward)
     {
-        if (! empty($this->mail->envelope->recipient)) {
+        $time = microtime(true);
+        if (count($this->mail->getRecipients()) < 1) {
             $this->say('503 Mail transaction in progress');
 
             return;
@@ -334,6 +391,8 @@ class EventLoopData
                 $returnOk = true;
             });
             if (! $returnOk) {
+                $this->mail->timings['xforward'] = microtime(true) - $time;
+
                 return;
             }
         }
@@ -351,6 +410,7 @@ class EventLoopData
         if ($returnOk) {
             $this->say('250 Ok');
         }
+        $this->mail->timings['xforward'] = microtime(true) - $time;
     }
 
     /**
@@ -362,11 +422,11 @@ class EventLoopData
     protected function handleData(string $data)
     {
         $this->mail->appendToRaw($data);
-        if (! $this->readingBody) { // reading headers
-            if (Str::startsWith($data, '--' . $this->mail->getMimeBoundary() ?? '--') &&
-                empty(trim($this->currentLine))
+        if (! $this->readingBody) {
+            if (Str::startsWith($data, '--' . $this->mail->getMimeBoundary()) ||
+                empty(trim($data))
             ) {
-                if (! empty($this->currentLine)) {
+                if (!empty($this->currentLine)) {
                     $this->addHeader();
                 }
                 $this->readingBody = true;
@@ -375,25 +435,38 @@ class EventLoopData
                 return;
             }
             if (preg_match('/^\s+\S/', $data)) {
-                if ($this->app->config['relay.unfold_headers']) {
-                    $this->currentLine .= "\n$data";
+                if (! $this->app->config['relay.unfold_headers']) {
+                    $this->currentLine .= "\n" . trim($data, "\r\n");
                 } else {
+                    if (Str::endsWith($this->currentLine, ';')) {
+                        $this->currentLine .= ' ';
+                    }
                     $this->currentLine .= trim($data);
                 }
             } else {
-                $this->addHeader();
+                if (! empty($this->currentLine)) {
+                    $this->addHeader();
+                }
                 $this->currentLine = trim($data);
             }
 
             return;
         }
+
+        if (Str::startsWith($data, '--' . $this->mail->getMimeBoundary()) && ! Str::endsWith($data, '--')) {
+            $this->mail->attachRaw($this->currentLine);
+            $this->currentLine = '';
+        }
+
         if (trim($data) == "--{$this->mail->getMimeBoundary()}--") {
             $this->endingMail = true;
         }
         if ($this->endingMail && empty(trim($data))) {
             if (substr_count($this->currentLine, '.') > 0) {
+                $time = microtime(true);
                 $this->readingBody = false;
                 $this->readMode = false;
+                $this->endingMail = false;
                 $this->currentLine = '';
                 $this->handleWrapper(function () {
                     $this->mail = (new Pipeline($this->app))
@@ -404,10 +477,11 @@ class EventLoopData
                     $queueId = $this->sendToQueue();
                     $this->say("250 2.0.0 Ok: queued as $queueId");
                 });
+                $this->mail->timings['data'] = microtime(true) - $time;
 
                 return;
             }
-            if (! empty($this->currentLine)) {
+            if (!empty($this->currentLine)) {
                 $this->mail->attachRaw($this->currentLine);
             }
             $this->currentLine = '';
@@ -430,7 +504,7 @@ class EventLoopData
             Carbon::now()->toString() .
             $this->mail->getHelo() .
             $this->mail->getSenderIp() .
-            $this->mail-getSender()
+            $this->mail->getSender()
         );
 
         $this->mail->setQueueId($queueId);
@@ -487,14 +561,15 @@ class EventLoopData
      */
     private function addHeader(): void
     {
-        if (preg_match('/^(.+): (.+)$/', $this->currentLine, $matches)) {
+        if (preg_match('/^(.+): (.+)$/s', $this->currentLine, $matches)) {
             [, $header, $value] = $matches;
             if (strtolower($header) == 'content-type') {
-                if (preg_match('/boundary=["\'](.*)["\']/', $value)) {
+                if (preg_match('/boundary=["\'](.*)["\']/', $value, $matches)) {
                     $this->mail->setMimeBoundary($matches[1]);
                 }
             }
-            $this->mail->headers[strtolower($header)][] = $value;
+
+            $this->mail->addHeader(strtolower($header), $value);
         }
     }
 }
