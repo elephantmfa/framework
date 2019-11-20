@@ -52,7 +52,7 @@ if (! function_exists('info')) {
      * @param string $logMessage
      * @return void
      */
-    function info(string $logMessage)
+    function info(?string $logMessage)
     {
         echo '[' . Carbon::now() . "] $logMessage\n";
     }
