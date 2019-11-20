@@ -9,6 +9,9 @@ use Illuminate\Support\Str;
 
 class Mail implements MailContract, Jsonable, Arrayable
 {
+    public $supplementalData;
+    public $timings = [];
+
     protected $raw = '';
     protected $envelope;
     protected $connection;
@@ -25,11 +28,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * Add a header at the top of the mail message.
-     *
-     * @param string $header
-     * @param string $value
-     * @return \Elephant\Contracts\Mail\Mail
+     * {@inheritDoc}
      */
     public function appendHeader(string $header, string $value): MailContract
     {
@@ -45,11 +44,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * Add a header at the bottom of the headers of the mail message.
-     *
-     * @param string $header
-     * @param string $value
-     * @return \Elephant\Contracts\Mail\Mail
+     * {@inheritDoc}
      */
     public function prependHeader(string $header, string $value): MailContract
     {
@@ -74,13 +69,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * Change a header according to the  alteration callable.
-     *
-     * @param string $header
-     * @param callable $alteration
-     * @param int $which Which header to add in the event of multiple of the same header.
-     *  If unset, alter the latest instance of the header.
-     * @return \Elephant\Contracts\Mail\Mail
+     * {@inheritDoc}
      */
     public function alterHeader(string $header, callable $alteration, ?int $which = null): MailContract
     {
@@ -100,6 +89,9 @@ class Mail implements MailContract, Jsonable, Arrayable
         $updated = false;
         $seenCount = 0;
         foreach (explode("\n", $this->raw) as $line) {
+            if (empty(trim($line))) {
+                break;
+            }
             [$h, $v] = explode(': ', $line, 2);
             if ($h === $header) {
                 $seenCount++;
@@ -117,12 +109,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * Delete a header.
-     *
-     * @param string $header
-     * @param integer $which Which header to add in the event of multiple of the same header.
-     *  If unset, alter the latest instance of the header.
-     * @return \Elephant\Contracts\Mail\Mail
+     * {@inheritDoc}
      */
     public function deleteHeader(string $header, ?int $which = null): MailContract
     {
@@ -149,10 +136,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * Attach a body section or attachment.
-     *
-     * @param \Elephant\Mail\BodyPart $body
-     * @return \Elephant\Contracts\Mail\Mail
+     * {@inheritDoc}
      */
     public function attach(BodyPart $body): MailContract
     {
@@ -168,10 +152,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * Attach a body section or attachment.
-     *
-     * @param string $body
-     * @return \Elephant\Contracts\Mail\Mail
+     * {@inheritDoc}
      */
     public function attachRaw(string $body): MailContract
     {
@@ -187,10 +168,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * Add an email address to BCC. This will not appear in the headers.
-     *
-     * @param string $recipient
-     * @return \Elephant\Contracts\Mail\Mail
+     * {@inheritDoc}
      */
     public function bcc(string $recipient): MailContract
     {
@@ -200,10 +178,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * Add an email address to CC. This will appear in the headers.
-     *
-     * @param string $recipient
-     * @return \Elephant\Contracts\Mail\Mail
+     * {@inheritDoc}
      */
     public function cc(string $recipient): MailContract
     {
@@ -220,17 +195,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * Set the final destination of the mail message.
-     *   $destination can be either an IP address, IP:port, or [IPv6],
-     *   or [IPv6]:port or a keyword:
-     *     * allow
-     *     * reject
-     *     * defer
-     *     * quarantine
-     *     * drop
-     *
-     * @param string $destination
-     * @return \Elephant\Contracts\Mail\Mail
+     * {@inheritDoc}
      */
     public function setFinalDestination(string $destination): MailContract
     {
@@ -249,10 +214,7 @@ class Mail implements MailContract, Jsonable, Arrayable
 
 
     /**
-     * Add a header to the headers array.
-     *
-     * @param string $header
-     * @return \Elephant\Contracts\Mail\Mail
+     * {@inheritDoc}
      */
     public function addHeader(string $header, string $value): MailContract
     {
@@ -262,10 +224,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * Set a HELO message.
-     *
-     * @param string $helo
-     * @return \Elephant\Contracts\Mail\Mail
+     * {@inheritDoc}
      */
     public function setHelo(string $helo): MailContract
     {
@@ -275,10 +234,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * Set the sender IP of the message.
-     *
-     * @param string $ip
-     * @return \Elephant\Contracts\Mail\Mail
+     * {@inheritDoc}
      */
     public function setSenderIp(string $ip): MailContract
     {
@@ -288,10 +244,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * Set the sender name (PTR record of the IP) of the message.
-     *
-     * @param string $name
-     * @return \Elephant\Contracts\Mail\Mail
+     * {@inheritDoc}
      */
     public function setSenderName(string $name): MailContract
     {
@@ -301,10 +254,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * Set the protocol for the message. Will be either SMTP or ESMTP.
-     *
-     * @param string $protocol
-     * @return \Elephant\Contracts\Mail\Mail
+     * {@inheritDoc}
      */
     public function setProtocol(string $protocol): MailContract
     {
@@ -314,10 +264,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * Add a recipient to the recipient array.
-     *
-     * @param string $recipient
-     * @return \Elephant\Contracts\Mail\Mail
+     * {@inheritDoc}
      */
     public function addRecipient(string $recipient): MailContract
     {
@@ -327,20 +274,17 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * Set the sender of the message.
-     *
-     * @param string $sender
-     * @return \Elephant\Contracts\Mail\Mail
+     * {@inheritDoc}
      */
     public function setSender(string $sender): MailContract
     {
+        $this->envelope->sender = $sender;
+
         return $this;
     }
+
     /**
-     * Set the queue ID of the message.
-     *
-     * @param string $queueId
-     * @return \Elephant\Contracts\Mail\Mail
+     * {@inheritDoc}
      */
     public function setQueueId(string $queueId): MailContract
     {
@@ -350,10 +294,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * Set the MIME boundary
-     *
-     * @param string $boundary
-     * @return \Elephant\Contracts\Mail\Mail
+     * {@inheritDoc}
      */
     public function setMimeBoundary(string $boundary): MailContract
     {
@@ -364,10 +305,7 @@ class Mail implements MailContract, Jsonable, Arrayable
 
 
     /**
-     * Get a header from the headers array
-     *
-     * @param string|null $header
-     * @return array
+     * {@inheritDoc}
      */
     public function getHeader(?string $header = null): array
     {
@@ -378,25 +316,20 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * Get the index of the newest instance of a header.
-     *
-     * @param string $header
-     * @return integer
+     * {@inheritDoc}
      */
     public function getNewestHeaderIndex(string $header): int
     {
-        $c = count($this->headers[$header]) - 1;
-        if ($c < 0) {
-            $c = 0;
+        if (! isset($this->headers[$header])) {
+            return 0;
         }
+        $c = count($this->headers[$header]) - 1;
 
         return $c;
     }
 
     /**
-     * Get the HELO of the message.
-     *
-     * @return string|null
+     * {@inheritDoc}
      */
     public function getHelo(): ?string
     {
@@ -404,29 +337,23 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * Get the sender IP of the message.
-     *
-     * @return string
+     * {@inheritDoc}
      */
     public function getSenderIp(): string
     {
-        return $this->connection->sender_ip;
+        return $this->connection->senderIp;
     }
 
     /**
-     * Get the sender name of the message.
-     *
-     * @return string
+     * {@inheritDoc}
      */
     public function getSenderName(): string
     {
-        return $this->connection->sender_name;
+        return $this->connection->senderName;
     }
 
     /**
-     * Get the protocol of the message.
-     *
-     * @return string
+     * {@inheritDoc}
      */
     public function getProtocol(): string
     {
@@ -434,9 +361,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * Get the recipients of the message.
-     *
-     * @return array|null
+     * {@inheritDoc}
      */
     public function getRecipients(): ?array
     {
@@ -444,9 +369,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * Get the sender of the message.
-     *
-     * @return string|null
+     * {@inheritDoc}
      */
     public function getSender(): ?string
     {
@@ -464,9 +387,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * Get the MIME boundary of the message.
-     *
-     * @return string|null
+     * {@inheritDoc}
      */
     public function getMimeBoundary(): ?string
     {
@@ -475,10 +396,7 @@ class Mail implements MailContract, Jsonable, Arrayable
 
 
     /**
-     * Append to the end of the raw data.
-     *
-     * @param string $rawData
-     * @return \Elephant\Contracts\Mail\Mail
+     * {@inheritDoc}
      */
     public function appendToRaw(string $rawData): MailContract
     {
@@ -488,9 +406,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * Get the raw data of the mail.
-     *
-     * @return string|null
+     * {@inheritDoc}
      */
     public function getRaw(): ?string
     {
@@ -498,10 +414,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * Set the connection object.
-     *
-     * @param \Elephant\Mail\Connection $connection
-     * @return \Elephant\Contracts\Mail\Mail
+     * {@inheritDoc}
      */
     public function setConnection(Connection $connection): MailContract
     {
@@ -511,9 +424,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * Get the connection object.
-     *
-     * @return \Elephant\Mail\Connection
+     * {@inheritDoc}
      */
     public function getConnection(): Connection
     {
@@ -521,9 +432,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * Create an array representation of the mail.
-     *
-     * @return array
+     * {@inheritDoc}
      */
     public function toArray()
     {
@@ -537,10 +446,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * Create a json representation of the mail.
-     *
-     * @param integer $options
-     * @return string
+     * {@inheritDoc}
      */
     public function toJson($options = 0)
     {
