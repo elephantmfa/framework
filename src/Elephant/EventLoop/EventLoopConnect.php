@@ -34,7 +34,7 @@ class EventLoopConnect
             $mail->setSenderIp($matches[1]);
         }
         $mail->getConnection()->receivedPort = $port;
-        $mail->setProtocol('SMTP');
+        $mail->setProtocol('ESMTP');
         $mail->setSenderName('[UNKNOWN]');
         try {
             $mail = (new Pipeline($this->app))
