@@ -185,7 +185,7 @@ class Kernel implements KernelContract
      */
     public function writePID()
     {
-        $this->app['filesystem']->disk('tmp')->put('pid', $this->pid);
+        $this->app['filesystem']->put('run/elephant.pid', $this->pid);
     }
 
     /**
@@ -195,7 +195,7 @@ class Kernel implements KernelContract
      */
     public function removePID()
     {
-        $this->app['filesystem']->disk('tmp')->delete('pid');
+        $this->app['filesystem']->delete('run/elephant.pid');
     }
 
     /**
@@ -205,7 +205,7 @@ class Kernel implements KernelContract
      */
     public function getPID(): int
     {
-        return (int) $this->app['filesystem']->disk('tmp')->get('pid');
+        return (int) $this->app['filesystem']->get('run/elephant.pid');
     }
 
     /**
@@ -215,6 +215,6 @@ class Kernel implements KernelContract
      */
     public function PIDExists(): bool
     {
-        return $this->app['filesystem']->disk('tmp')->exists('pid');
+        return $this->app['filesystem']->exists('run/elephant.pid');
     }
 }
