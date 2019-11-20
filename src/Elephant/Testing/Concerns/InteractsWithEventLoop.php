@@ -48,9 +48,11 @@ trait InteractsWithEventLoop
     protected function speak($message, $read = true)
     {
         fwrite($this->client, "$message\r\n");
-
         if ($read) {
-            $this->tick()->lastResponse = trim(fread($this->client, 4096), "\r\n");
+            $this->tick();
+            $parts = explode("\r\n", trim(fread($this->client, 4096), "\r\n"));
+            dump($parts);
+            $this->lastResponse = $parts[count($parts) - 1];
         }
         
         return $this;
@@ -62,27 +64,27 @@ trait InteractsWithEventLoop
         return $this;
     }
 
-    public function assert2XXResponse()
+    public function assert2xxResponse()
     {
-        $this->assertTrue(preg_match('/^2\d\d/', $this->lastResponse) !== false);
+        $this->assertTrue(preg_match('/^2\d\d/', $this->lastResponse) != false);
         return $this;
     }
 
-    public function assert3XXResponse()
+    public function assert3xxResponse()
     {
-        $this->assertTrue(preg_match('/^3\d\d/', $this->lastResponse) !== false);
+        $this->assertTrue(preg_match('/^3\d\d/', $this->lastResponse) != false);
         return $this;
     }
 
-    public function assert4XXResponse()
+    public function assert4xxResponse()
     {
-        $this->assertTrue(preg_match('/^4\d\d/', $this->lastResponse) !== false);
+        $this->assertTrue(preg_match('/^4\d\d/', $this->lastResponse) != false);
         return $this;
     }
 
-    public function assert5XXResponse()
+    public function assert5xxResponse()
     {
-        $this->assertTrue(preg_match('/^5\d\d/', $this->lastResponse) !== false);
+        $this->assertTrue(preg_match('/^5\d\d/', $this->lastResponse) != false);
         return $this;
     }
 
