@@ -47,6 +47,8 @@ class Envelope implements Arrayable
         if (in_array($name, ['helo', 'sender', 'recipients'])) {
             if ($name == 'recipients') {
                 $this->recipients[] = $value;
+
+                return;
             }
             $this->$name = $value;
 
