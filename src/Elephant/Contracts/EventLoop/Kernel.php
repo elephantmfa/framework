@@ -5,7 +5,7 @@ namespace Elephant\Contracts\EventLoop;
 interface Kernel
 {
     /**
-     * Bootstrap the application for HTTP requests.
+     * Bootstrap the application for SMTP requests.
      *
      * @return void
      */
