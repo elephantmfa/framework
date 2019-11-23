@@ -7,9 +7,10 @@ trait CommunicateTrait
     /**
      * The connection interface to speak on.
      *
-     * @var \React\Socket\ConnectionInterface
+     * @var \React\Stream\WritableResourceStream
      */
     protected $connection;
+    
     /**
      * Write something on the connection.
      *
