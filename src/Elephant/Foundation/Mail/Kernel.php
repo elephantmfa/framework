@@ -4,6 +4,7 @@ namespace Elephant\Foundation\Mail;
 
 use Elephant\Foundation\Application;
 use Elephant\Contracts\Mail\Kernel as KernelContract;
+use Elephant\EventLoop\Mail\EventLoopData;
 
 class Kernel implements KernelContract
 {
@@ -96,18 +97,30 @@ class Kernel implements KernelContract
         if (!$this->app->hasBeenBootstrapped()) {
             $this->app->bootstrapWith($this->bootstrappers());
         }
+
+        $this->app->addTerminatingCallback(function () {
+            $this->app->stdin->close();
+            $this->app->stdout->close();
+
+            $this->app->loop->stop();
+            $this->removePID();
+        });
+        $this->app->loop->addSignal(SIGINT, function (int $signal) {
+            $this->terminate();
+            die("\nClosing " . $this->app->config['app.name'] . " [{$this->pid}].\n");
+        });
     }
 
     public function handle()
     {
-        //
+        $this->app->stdin->on('data', new EventLoopData($this->app, $this->filters));
+
+        $this->app->loop->run();
     }
 
     /**
      * Call the terminate method on any terminable middleware.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Illuminate\Http\Response  $response
      * @return void
      */
     public function terminate()
@@ -123,29 +136,6 @@ class Kernel implements KernelContract
     protected function bootstrappers()
     {
         return $this->bootstrappers;
-    }
-
-    /**
-     * Report the exception to the exception handler.
-     *
-     * @param  \Exception  $e
-     * @return void
-     */
-    protected function reportException(Exception $e)
-    {
-        $this->app[ExceptionHandler::class]->report($e);
-    }
-
-    /**
-     * Render the exception to a response.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Exception  $e
-     * @return \Symfony\Component\HttpFoundation\Response
-     */
-    protected function renderException($request, Exception $e)
-    {
-        return $this->app[ExceptionHandler::class]->render($request, $e);
     }
 
     /**
