@@ -157,7 +157,7 @@ class SpamAssassin implements Scanner
         }
 
         $currentLine = '';
-        while ($line = socket_read($socket, 512)) {
+        while ($line = @socket_read($socket, 512, PHP_NORMAL_READ)) {
             if (preg_match('/^\s+[a-z]+/i', $line)) {
                 $currentLine .= " " . trim($line);
                 continue;
@@ -180,8 +180,8 @@ class SpamAssassin implements Scanner
                     }, explode(',', $tests));
                     $this->results = [
                         'tests' => $tests,
-                        'autolearn' => $autolearn,
-                        'autolearn_force' => $autolearn_force,
+                        'autolearn' => strtolower($autolearn) === 'yes',
+                        'autolearn_force' => strtolower($autolearn_force) === 'yes',
                         'version' => $version,
                     ];
 
