@@ -76,8 +76,7 @@ class Kernel implements KernelContract
         }
 
         for ($i=0; $i < $this->app->config['app.processes.min']; $i++) {
-            // @todo make base subprocesses.
-            // `php elephant subprocess:start --id="md5-Id"`
+            $this->app[ProcessManager::class]->createProcess();
         }
 
         foreach ($this->app->config['relay.ports'] as $port) {
@@ -87,7 +86,7 @@ class Kernel implements KernelContract
             ]);
         }
 
-        $this->servers[] = $this->app->make('rpc');
+        $this->servers[] = $this->app->make('ipc');
 
         $this->writePID();
 
