@@ -72,13 +72,13 @@ class EventLoopData
      * @param array $filters
      * @return void
      */
-    public function __construct(Container $app, ConnectionInterface $connection, Mail &$mail, array $filters)
+    public function __construct(Container $app, array $filters)
     {
         $this->app = $app;
-        $this->connection = $connection;
         $this->filters = $filters;
-        $this->mail = $mail;
+        $this->mail = null;
         $this->readMode = false;
+        $this->connection = $this->app->stdout;
     }
 
     /**
@@ -124,15 +124,17 @@ class EventLoopData
         }
         $data = trim($data);
         $lcData = strtolower($data);
-        if (Str::startsWith($lcData, ['helo', 'ehlo'])) {
+        if (Str::startsWith($lcData, 'connect')) {
+            $this->handleConnect($data);
+        } elseif (Str::startsWith($lcData, ['helo', 'ehlo'])) {
             $this->handleHelo($data);
-        } elseif (Str::startsWith($lcData, ['mail from'])) {
+        } elseif (Str::startsWith($lcData, 'mail from')) {
             $this->handleMailFrom($data);
-        } elseif (Str::startsWith($lcData, ['rcpt to'])) {
+        } elseif (Str::startsWith($lcData, 'rcpt to')) {
             $this->handleRcptTo($data);
-        } elseif (Str::startsWith($lcData, ['xforward'])) {
+        } elseif (Str::startsWith($lcData, 'xforward')) {
             $this->handleXForward($data);
-        } elseif (Str::startsWith($lcData, ['data'])) {
+        } elseif (Str::startsWith($lcData, 'data')) {
             if ($lcData !== 'data') {
                 $this->say('501 5.5.4 Syntax: DATA');
 
@@ -145,15 +147,15 @@ class EventLoopData
             }
             $this->say('354 End data with <CR><LF>.<CR><LF>');
             $this->readMode = true;
-        } elseif (Str::startsWith($lcData, ['quit'])) {
+        } elseif (Str::startsWith($lcData, 'quit')) {
             $this->handleQuit($data);
-        } elseif (Str::startsWith($lcData, ['rset'])) {
+        } elseif (Str::startsWith($lcData, 'rset')) {
             $this->handleReset($data);
-        } elseif (Str::startsWith($lcData, ['noop'])) {
+        } elseif (Str::startsWith($lcData, 'noop')) {
             $this->handleNoop($data);
-        } elseif (Str::startsWith($lcData, ['vrfy'])) {
+        } elseif (Str::startsWith($lcData, 'vrfy')) {
             $this->handleVerify($data);
-        } elseif (Str::startsWith($lcData, ['starttls'])) {
+        } elseif (Str::startsWith($lcData, 'starttls')) {
             $this->handleTls($data);
         } elseif (!empty($data)) {
             $this->handleUnknownCommand($data);
@@ -161,6 +163,37 @@ class EventLoopData
         if ($this->app->config['app.debug']) {
             dump($data, $this->mail);
         }
+    }
+
+    /**
+     * Handle the connection of an SMTP client.
+     *
+     * @param string $data
+     * @return void
+     */
+    protected function handleConnect(string $data)
+    {
+        $this->mail = $this->app->make(Mail::class);
+        if (preg_match('/CONNECT remote:\w+://(.+):\d+ local:\w+://.+(.+)', $data, $matches)) {
+            [, $remoteIp, $localPort] = $matches;
+            $this->mail->setSenderIp($remoteIp);
+            $this->mail->getConnection()->receivedPort = $localPort;
+            $this->mail->setProtocol('ESMTP');
+            $this->mail->setSenderName(gethostbyaddr($remoteIp) ?: '[UNKNOWN]');
+        }
+
+        $this->handleWrapper(function () {
+            $this->mail = (new Pipeline($this->app))
+                ->send($this->mail)
+                ->via('filter')
+                ->through($this->filters['connect'] ?? [])
+                ->thenReturn();
+            $this->say('220 ' . $this->app->config['relay.greeting_banner'] ?? 'Welcome to ElephantMFA ESMTP');
+        });
+
+        $this->app->loop->addTimer($this->app->config['relay.timeout'], function () {
+            $this->close('421 4.4.2 ' . $this->app->config['app.name'] . ' Error: timeout exceeded');
+        });
     }
 
     /**
