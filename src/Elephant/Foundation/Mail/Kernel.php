@@ -27,47 +27,56 @@ class Kernel implements KernelContract
         \Elephant\Foundation\Bootstrap\RegisterProviders::class,
         \Elephant\Foundation\Bootstrap\BootProviders::class,
     ];
-    /**
-     * A list of filters to apply upon connection.
-     *
-     * @var array
-     */
-    protected $connectFilters = [ ];
 
     /**
-     * A list of filters to apply when HELO/EHLO command is called.
+     * The filters to apply to different steps in the mail process.
      *
      * @var array
      */
-    protected $heloFilters = [ ];
+    protected $filters = [
 
-    /**
-     * A list of filters to call when the MAIL FROM command is called.
-     *
-     * @var array
-     */
-    protected $mailFromFilters = [ ];
+        /**
+         * A list of filters to apply upon connection.
+         *
+         * @var array
+         */
+        'connect' => [ ],
 
-    /**
-     * A list of filters to call upon each call of RCPT TO command.
-     *
-     * @var array
-     */
-    protected $rcptToFilters = [ ];
+        /**
+         * A list of filters to apply when HELO/EHLO command is called.
+         *
+         * @var array
+         */
+        'helo' => [ ],
 
-    /**
-     * A list of filters to apply at the end of the DATA command.
-     *
-     * @var array
-     */
-    protected $dataFilters = [ ];
+        /**
+         * A list of filters to call when the MAIL FROM command is called.
+         *
+         * @var array
+         */
+        'mail_from' => [ ],
 
-    /**
-     * A list of filters to apply to queued mail.
-     *
-     * @var array
-     */
-    protected $queuedFilters = [ ];
+        /**
+         * A list of filters to call upon each call of RCPT TO command.
+         *
+         * @var array
+         */
+        'rcpt_to' => [ ],
+
+        /**
+         * A list of filters to apply at the end of the DATA command.
+         *
+         * @var array
+         */
+        'data' => [ ],
+
+        /**
+         * A list of filters to apply to queued mail.
+         *
+         * @var array
+         */
+        'queued' => [ ],
+    ];
 
     /**
      * The PID of the elephant process.
@@ -87,40 +96,11 @@ class Kernel implements KernelContract
         if (!$this->app->hasBeenBootstrapped()) {
             $this->app->bootstrapWith($this->bootstrappers());
         }
-
-        $this->app->addTerminatingCallback(function () {
-            $this->app->loop->stop();
-        });
-        $this->app->addTerminatingCallback(function () {
-            $this->removePID();
-        });
-
-        $this->app->loop->addSignal(SIGINT, function (int $signal) {
-            $this->terminate();
-            die("\nClosing " . $this->app->config['app.name'] . " [{$this->pid}].\n");
-        });
     }
 
     public function handle()
     {
-        $this->bootstrap();
-
-        if ($this->PIDExists()) {
-            die($this->app->config['app.name'] . " is already running.\n");
-        }
-
-        $servers = [];
-
-        foreach ($this->app->config['relay.ports'] as $name => $port) {
-            $servers[] = $this->app->make('server', [
-                'port' => $port,
-                'filters' => $this->filters,
-            ]);
-        }
-
-        $this->writePID();
-
-        $this->app->loop->run();
+        //
     }
 
     /**
@@ -176,45 +156,5 @@ class Kernel implements KernelContract
     public function getApplication()
     {
         return $this->app;
-    }
-
-    /**
-     * Writes the PID out to a PID file.
-     * 
-     * @return void
-     */
-    public function writePID()
-    {
-        $this->app['filesystem']->put('run/elephant.pid', $this->pid);
-    }
-
-    /**
-     * Writes the PID out to a PID file.
-     * 
-     * @return void
-     */
-    public function removePID()
-    {
-        $this->app['filesystem']->delete('run/elephant.pid');
-    }
-
-    /**
-     * Gets the PID from the PID file
-     *
-     * @return int
-     */
-    public function getPID(): int
-    {
-        return (int) $this->app['filesystem']->get('run/elephant.pid');
-    }
-
-    /**
-     * Gets the PID from the PID file
-     *
-     * @return bool
-     */
-    public function PIDExists(): bool
-    {
-        return $this->app['filesystem']->exists('run/elephant.pid');
     }
 }
