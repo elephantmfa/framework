@@ -54,7 +54,7 @@ if (!function_exists('info')) {
      */
     function info(?string $logMessage)
     {
-        app('stdout')->write('[' . Carbon::now() . "] $logMessage");
+        echo '[' . Carbon::now() . "] $logMessage\n";
     }
 }
 
@@ -67,7 +67,7 @@ if (!function_exists('error')) {
      */
     function error(?string $logMessage)
     {
-        app('stdout')->write('[' . Carbon::now() . "]E $logMessage");
+        echo '[' . Carbon::now() . "]E $logMessage\n";
     }
 }
 
