@@ -45,9 +45,9 @@ if (!function_exists('config')) {
     }
 }
 
-if (! function_exists('info')) {
+if (!function_exists('info')) {
     /**
-     * Logs out the $logMessage.
+     * Logs out the $logMessage on INFO.
      *
      * @param string $logMessage
      * @return void
@@ -55,6 +55,19 @@ if (! function_exists('info')) {
     function info(?string $logMessage)
     {
         echo '[' . Carbon::now() . "] $logMessage\n";
+    }
+}
+
+if (!function_exists('error')) {
+    /**
+     * Logs out the $logMessage on ERROR.
+     *
+     * @param string $logMessage
+     * @return void
+     */
+    function error(?string $logMessage)
+    {
+        echo '[' . Carbon::now() . "]X $logMessage\n";
     }
 }
 
