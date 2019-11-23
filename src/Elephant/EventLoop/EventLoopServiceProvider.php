@@ -33,6 +33,14 @@ class EventLoopServiceProvider extends ServiceProvider
             \Elephant\EventLoop\ProcessManager::class
         );
 
+        $this->app->singleton('stdin', function ($app) {
+            return new ReadableResourceStream(STDIN, $app->loop);
+        });
+        $this->app->singleton('stdout', function ($app) {
+            return new WritableResourceStream(STDOUT, $app->loop);
+        });
+        
+        
         $this->app->bind('server', function ($app, $params) {
             $port = $params['port'];
             if (! isset($port)) {
@@ -61,6 +69,15 @@ class EventLoopServiceProvider extends ServiceProvider
                 //     connection and subprocess.
                 $connection->pipe($process->stdin);
                 $process->stdout->pipe($connection);
+
+                $connection->on('close', new EventLoopClose($app, $connection));
+                $connection->on('end', new EventLoopTerminate($app, $connection));
+                $connection->on('error', new EventLoopError($app, $connection));
+
+                $process->stdin->write(
+                    'CONNECT remote:' . $connection->getRemoteAddress() .
+                        ' local:' . $connection->getLocalAddress()
+                );
             });
 
             return $server;
