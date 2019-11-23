@@ -84,6 +84,19 @@ if (! function_exists('dd')) {
     }
 }
 
+if (! function_exists('base_path')) {
+    /**
+     * Get the path to the storage folder.
+     *
+     * @param  string  $path
+     * @return string
+     */
+    function base_path($path = '')
+    {
+        return app('path.base') . ($path ? DIRECTORY_SEPARATOR . $path : $path);
+    }
+}
+
 if (! function_exists('storage_path')) {
     /**
      * Get the path to the storage folder.
