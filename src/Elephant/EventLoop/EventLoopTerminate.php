@@ -18,7 +18,6 @@ class EventLoopTerminate
 
     public function __invoke()
     {
-        info('Closing ' . $this->app->config['app.name'] . '.');
-        $this->app->terminate();
+        //
     }
 }
