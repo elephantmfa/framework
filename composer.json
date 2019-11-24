@@ -25,9 +25,12 @@
         "ext-json": "*",
         "ext-mbstring": "*",
         "ext-openssl": "*",
+        "dragonmantank/cron-expression": "^2.3",
+        "guzzlehttp/guzzle": "^6.4",
         "illuminate/bus": "^6.5",
         "illuminate/cache": "^6.5",
         "illuminate/config": "^6.5",
+        "illuminate/console": "^6.5",
         "illuminate/container": "^6.5",
         "illuminate/database": "^6.5",
         "illuminate/encryption": "^6.5",
@@ -36,6 +39,8 @@
         "illuminate/hashing": "^6.5",
         "illuminate/log": "^6.5",
         "illuminate/pipeline": "^6.5",
+        "illuminate/queue": "^6.5",
+        "illuminate/redis": "^6.5",
         "league/flysystem": "^1.0",
         "monolog/monolog": "^1.12|^2.0",
         "nesbot/carbon": "^2.0",
@@ -55,7 +60,6 @@
         "elephantmfa/foundation": "self.version",
         "elephantmfa/filtering": "self.version",
         "elephantmfa/mail": "self.version",
-        "elephantmfa/async": "self.version",
         "elephantmfa/contracts": "self.version"
     },
     "require-dev": {
@@ -83,6 +87,9 @@
         "psr-4": {
             "Tests\\": "tests/"
         }
+    },
+    "suggest": {
+        "laravel/framework": "Add in the full functionality of the laravel framework, granting more features."
     },
     "minimum-stability": "dev",
     "prefer-stable": true
