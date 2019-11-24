@@ -447,7 +447,6 @@ class EventLoopData
      */
     protected function handleData(string $data)
     {
-        info($this->currentLine);
         $this->mail->appendToRaw($data);
         if (! $this->readingBody) {
             if (Str::startsWith($data, '--' . $this->mail->getMimeBoundary()) ||
@@ -508,7 +507,7 @@ class EventLoopData
                     $this->say("250 2.0.0 Ok: queued as $queueId");
                 });
                 $this->mail->timings['data'] = microtime(true) - $time;
-                info(var_export($this->mail, true));
+                info($this->mail->toJson());
 
                 $queueProcess = $this->app->config['relay.queue_processor'] ?? 'process';
                 if ($queueProcess == 'process') {
