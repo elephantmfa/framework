@@ -491,7 +491,7 @@ class EventLoopData
             $this->endingMail = true;
         }
         if ($this->endingMail && empty(trim($data))) {
-            if (substr_count($this->currentLine, '.') > 0) {
+            if (substr_count($this->currentLine, "\n.\n") > 0) {
                 $time = microtime(true);
                 $this->readingBody = false;
                 $this->readMode = false;
