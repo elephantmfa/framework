@@ -55,7 +55,7 @@ class EventLoopServiceProvider extends ServiceProvider
                 $process = $pid = null;
                 if ($pm->getWaitingCount() < 1) {
                     if ($pm->getProcessCount() >= ($app->config['app.processes.max'] ?? 20)) {
-                        $connection->end("450 Unable to accept more mail at this time.");
+                        $connection->end("450 Unable to accept more mail at this time.\r\n");
 
                         return;
                     }
@@ -65,23 +65,37 @@ class EventLoopServiceProvider extends ServiceProvider
                     $process = $pm->getProcess($pid);
                 } else {
                     $pid = $pm->getNextWaitingPid();
+                    if (empty($pid)) {
+                        $connection->end("450 Unable to accept more mail at this time.\r\n");
+
+                        return;
+                    }
                     $pm->markBusy($pid);
                     $process = $pm->getProcess($pid);
                 }
 
+                $pm->processHandled[$pid]++;
+
                 // Create a 2-way bridge between the input and output of the
                 //     connection and subprocess.
-                $connection->pipe($process->stdin);
-                $process->stdout->pipe($connection);
+                $connection->on('data', function ($data) use ($process) {
+                    $process->stdin->write($data);
+                });
+                $process->stdout->on('data', function ($data) use ($connection, $pid) {
+                    $connection->write($data);
+                    if (strpos($data, 'Goodbye') !== false) {
+                        $this->app[ProcessManager::class]->markWaiting($pid);
+
+                        $connection->end();
+
+                        $maxRequests = $this->app->config['app.processes.max_requests'] ?? 1000;
+                        if ($this->app[ProcessManager::class]->processHandled > $maxRequests) {
+                            $this->app[ProcessManager::class]->killProcess($pid);
+                        }
+                    }
+                });
                 $process->stderr->on('data', function ($error) {
                     error($error);
-                });
-                $process->stdout->on('data', function ($data) use ($connection) {
-                    if (strpos($data, 'Goodbye') === false) {
-                        return;
-                    }
-                    
-                    $connection->end();
                 });
 
                 $connection->on('end', new EventLoopClose($app, $connection));

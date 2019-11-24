@@ -32,6 +32,13 @@ class ProcessManager implements PMContract, ArrayAccess
     protected $waitingProcesses;
 
     /**
+     * Array mapping `pid => handled count`.
+     * 
+     * @var array
+     */
+    public $processHandled;
+
+    /**
      * Construct a new Process Manager.
      *
      * @param \Illuminate\Contracts\Foundation\Application $app The application instance.
@@ -67,13 +74,13 @@ class ProcessManager implements PMContract, ArrayAccess
     /** {@inheritDoc} */
     public function getNextWaitingPid(): string
     {
-        return $this->waitingProcesses[0];
+        return array_pop($this->waitingProcesses) ?? '';
     }
 
     /** {@inheritDoc} */
     public function getWaitingCount(): int
     {
-        return sizeof($this->waitingProcesses);
+        return count($this->waitingProcesses);
     }
 
     /** {@inheritDoc} */
@@ -122,8 +129,7 @@ class ProcessManager implements PMContract, ArrayAccess
         $this->processes[$pid]->start($this->app->loop);
 
         $this->waitingProcesses[] = $pid;
-
-        info("Process [$pid] created.");
+        $this->processHandled[$pid] = 0;
 
         return $pid;
     }
@@ -136,7 +142,17 @@ class ProcessManager implements PMContract, ArrayAccess
             $pipe->close();
         }
 
-        return $this->processes[$pid]->terminate();
+        info("[$pid] Closing process...");
+
+        $return = $this->processes[$pid]->terminate();
+
+        unset($this->processes[$pid]);
+
+        if (count($this->processes) < ($this->app->config['app.processes.min'] ?? 5)) {
+            $this->createProcess();
+        }
+
+        return $return;
     }
 
     /** {@inheritDoc} */
