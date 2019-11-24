@@ -1,0 +1,23 @@
+<?php
+
+namespace DummyNamespace;
+
+use Elephant\Contracts\Filter;
+use Elephant\Contracts\Mail\Mail;
+
+class DummyClass implements Filter
+{
+    /**
+     * Run a filter against the mail.
+     *
+     * @param Mail $email
+     * @param callable $next
+     * @return void
+     */
+    public function filter(Mail $email, $next)
+    {
+        //
+
+        return $next($email);
+    }
+}
