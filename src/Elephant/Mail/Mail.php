@@ -312,7 +312,7 @@ class Mail implements MailContract, Jsonable, Arrayable
         if (! isset($header)) {
             return $this->headers;
         }
-        return $this->headers[$header];
+        return $this->headers[$header] ?? [];
     }
 
     /**
