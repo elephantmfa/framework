@@ -1,13 +1,13 @@
 <?php
 
-namespace Elephant\EventLoop;
+namespace Elephant\EventLoop\Mail;
 
 use Illuminate\Support\Str;
 use Elephant\Contracts\Mail\Mail;
 use Illuminate\Pipeline\Pipeline;
-use React\Socket\ConnectionInterface;
 use Illuminate\Contracts\Container\Container;
 use Elephant\EventLoop\Traits\CommunicateTrait;
+use Elephant\Mail\Jobs\QueueJob;
 use Illuminate\Support\Carbon;
 
 class EventLoopData
@@ -116,9 +116,6 @@ class EventLoopData
         if ($this->readMode) {
             $data = str_replace("\r\n", "\n", $data);
             $this->handleData($data);
-            if ($this->app->config['app.debug']) {
-                dump($data, $this->mail);
-            }
 
             return;
         }
@@ -160,9 +157,6 @@ class EventLoopData
         } elseif (!empty($data)) {
             $this->handleUnknownCommand($data);
         }
-        if ($this->app->config['app.debug']) {
-            dump($data, $this->mail);
-        }
     }
 
     /**
@@ -174,7 +168,7 @@ class EventLoopData
     protected function handleConnect(string $data)
     {
         $this->mail = $this->app->make(Mail::class);
-        if (preg_match('/CONNECT remote:\w+://(.+):\d+ local:\w+://.+(.+)', $data, $matches)) {
+        if (preg_match(';CONNECT remote:\w+://(.+):\d+ local:\w+://.+(.+);', $data, $matches)) {
             [, $remoteIp, $localPort] = $matches;
             $this->mail->setSenderIp($remoteIp);
             $this->mail->getConnection()->receivedPort = $localPort;
@@ -284,16 +278,15 @@ class EventLoopData
         $helo_parts = explode(' ', $helo, 2);
         $this->mail->setHelo($helo_parts[1] ?? '');
         $this->handleWrapper(function () use ($helo) {
-            $localAddr = $this->connection->getLocalAddress();
             $this->mail = (new Pipeline($this->app))
                 ->send($this->mail)
                 ->via('filter')
                 ->through($this->filters['helo'] ?? [])
                 ->thenReturn();
             if (Str::startsWith(strtolower($helo), 'helo')) {
-                $this->say('250 ' . config('app.name', $localAddr));
+                $this->say('250 ' . config('app.name', 'ElephantMFA ESMTP'));
             } else {
-                $this->say('250-' . config('app.name', $localAddr))
+                $this->say('250-' . config('app.name', 'ElephantMFA ESMTP'))
                     ->say("250-ENHANCEDSTATUSCODES")
                     ->say("250-PIPELINING")
                     ->say('250-SMTPUTF8')
@@ -454,6 +447,7 @@ class EventLoopData
      */
     protected function handleData(string $data)
     {
+        info($this->currentLine);
         $this->mail->appendToRaw($data);
         if (! $this->readingBody) {
             if (Str::startsWith($data, '--' . $this->mail->getMimeBoundary()) ||
@@ -467,6 +461,7 @@ class EventLoopData
 
                 return;
             }
+
             if (preg_match('/^\s+\S/', $data)) {
                 if (! $this->app->config['relay.unfold_headers']) {
                     $this->currentLine .= "\n" . trim($data, "\r\n");
@@ -491,7 +486,9 @@ class EventLoopData
             $this->currentLine = '';
         }
 
-        if (trim($data) == "--{$this->mail->getMimeBoundary()}--") {
+        if (empty($this->mail->getMimeBoundary()) && substr_count($this->currentLine, '.') > 0) {
+            $this->endingMail = true;
+        } elseif (trim($data) == "--{$this->mail->getMimeBoundary()}--") {
             $this->endingMail = true;
         }
         if ($this->endingMail && empty(trim($data))) {
@@ -507,10 +504,18 @@ class EventLoopData
                         ->via('filter')
                         ->through($this->filters['data'] ?? [])
                         ->thenReturn();
-                    $queueId = $this->sendToQueue();
+                    $queueId = $this->generateQueueId();
                     $this->say("250 2.0.0 Ok: queued as $queueId");
                 });
                 $this->mail->timings['data'] = microtime(true) - $time;
+                info(var_export($this->mail, true));
+
+                $queueProcess = $this->app->config['relay.queue_processor'] ?? 'process';
+                if ($queueProcess == 'process') {
+                    QueueJob::dispatchNow($this->mail);
+                } else {
+                    QueueJob::dispatch($this->mail);
+                }
 
                 return;
             }
@@ -530,7 +535,7 @@ class EventLoopData
      *
      * @return string
      */
-    protected function sendToQueue()
+    protected function generateQueueId()
     {
         $queueId = sha1(
             strtoupper(Str::random()) .
@@ -550,7 +555,6 @@ class EventLoopData
         // If queueing is enabled, we need to store the mail in the queue for
         //   later processing.
         $this->app->filesystem->disk('tmp')->put("queue/$queueId", $this->mail->getRaw());
-        // @todo Add to queue using queue driver so that queues can be processed.
 
         return $queueId;
     }
