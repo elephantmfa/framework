@@ -23,7 +23,7 @@ class Kernel implements KernelContract
     protected $bootstrappers = [
         \Elephant\Foundation\Bootstrap\LoadEnvironmentVariables::class,
         \Elephant\Foundation\Bootstrap\LoadConfiguration::class,
-        // \Elephant\Foundation\Bootstrap\HandleExceptions::class,
+        \Elephant\Foundation\Bootstrap\HandleExceptions::class,
         \Elephant\Foundation\Bootstrap\RegisterFacades::class,
         \Elephant\Foundation\Bootstrap\RegisterProviders::class,
         \Elephant\Foundation\Bootstrap\BootProviders::class,
@@ -38,12 +38,15 @@ class Kernel implements KernelContract
 
     protected $servers;
 
+    protected $spamd;
+
     public function __construct(Application $app)
     {
         $this->app = $app;
         $this->pid = getmypid();
     }
 
+    /** {@inheritDoc} */
     public function bootstrap()
     {
         if (!$this->app->hasBeenBootstrapped()) {
@@ -51,8 +54,15 @@ class Kernel implements KernelContract
         }
 
         $this->app->addTerminatingCallback(function () {
+            if (isset($this->smtpd)) {
+                $this->smtpd->close();
+            }
+
             foreach ($this->servers as $server) {
                 $server->close();
+            }
+            if (! @unlink(storage_path('app/run/elephant.sock'))) {
+                error('Failed to remove socket: ' . storage_path('app/run/elephant.sock'));
             }
 
             foreach ($this->app[ProcessManager::class]->getProcesses() as $pid => $process) {
@@ -61,18 +71,32 @@ class Kernel implements KernelContract
             
             $this->app->loop->stop();
             $this->removePID();
+            info("Closing " . $this->app->config['app.name'] . " [{$this->pid}].");
+            echo "Closing " . $this->app->config['app.name'] . " [{$this->pid}].\n";
         });
 
         $this->app->loop->addSignal(SIGINT, function (int $signal) {
             $this->terminate();
-            die("\nClosing " . $this->app->config['app.name'] . " [{$this->pid}].\n");
         });
     }
 
+    /** {@inheritDoc} */
     public function handle()
     {
         if ($this->PIDExists()) {
             die($this->app->config['app.name'] . " is already running.\n");
+        }
+
+        if ($this->app->config['scanners.spamassassin.spamd.manage'] ?? false) {
+            $opts = $this->app->config['scanners.spamassassin.spamd.parameters'] ?? [];
+            $opts = implode(' ', $opts);
+            $this->spamd = new React\ChildProcess\Process("spamd $opts");
+            $this->spamd->stdout->on('data', function ($data) {
+                info($data);
+            });
+            $this->spamd->stderr->on('data', function ($data) {
+                error($data);
+            });
         }
 
         for ($i=0; $i < $this->app->config['app.processes.min']; $i++) {
@@ -82,7 +106,6 @@ class Kernel implements KernelContract
         foreach ($this->app->config['relay.ports'] as $port) {
             $this->servers[] = $this->app->make('server', [
                 'port' => $port,
-                'filters' => $this->filters,
             ]);
         }
 
@@ -93,13 +116,7 @@ class Kernel implements KernelContract
         $this->app->loop->run();
     }
 
-    /**
-     * Call the terminate method on any terminable middleware.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Illuminate\Http\Response  $response
-     * @return void
-     */
+    /** {@inheritDoc} */
     public function terminate()
     {
         $this->app->terminate();
@@ -113,29 +130,6 @@ class Kernel implements KernelContract
     protected function bootstrappers()
     {
         return $this->bootstrappers;
-    }
-
-    /**
-     * Report the exception to the exception handler.
-     *
-     * @param  \Exception  $e
-     * @return void
-     */
-    protected function reportException(Exception $e)
-    {
-        $this->app[ExceptionHandler::class]->report($e);
-    }
-
-    /**
-     * Render the exception to a response.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Exception  $e
-     * @return \Symfony\Component\HttpFoundation\Response
-     */
-    protected function renderException($request, Exception $e)
-    {
-        return $this->app[ExceptionHandler::class]->render($request, $e);
     }
 
     /**
