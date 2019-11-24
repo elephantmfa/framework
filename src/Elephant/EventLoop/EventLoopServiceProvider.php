@@ -8,6 +8,8 @@ use React\EventLoop\Factory;
 use React\Socket\UnixServer;
 use React\Socket\ConnectionInterface;
 use Illuminate\Support\ServiceProvider;
+use React\Stream\ReadableResourceStream;
+use React\Stream\WritableResourceStream;
 use Elephant\Contracts\EventLoop\ProcessManager;
 
 class EventLoopServiceProvider extends ServiceProvider
@@ -50,7 +52,7 @@ class EventLoopServiceProvider extends ServiceProvider
 
             $server->on('connection', function (ConnectionInterface $connection) use ($app) {
                 $pm = $app[ProcessManager::class];
-                $process = null;
+                $process = $pid = null;
                 if ($pm->getWaitingCount() < 1) {
                     if ($pm->getProcessCount() >= ($app->config['app.processes.max'] ?? 20)) {
                         $connection->end("450 Unable to accept more mail at this time.");
@@ -58,7 +60,9 @@ class EventLoopServiceProvider extends ServiceProvider
                         return;
                     }
                     
-                    $process = $pm->createProcess();
+                    $pid = $pm->createProcess();
+                    $pm->markBusy($pid);
+                    $process = $pm->getProcess($pid);
                 } else {
                     $pid = $pm->getNextWaitingPid();
                     $pm->markBusy($pid);
@@ -69,9 +73,19 @@ class EventLoopServiceProvider extends ServiceProvider
                 //     connection and subprocess.
                 $connection->pipe($process->stdin);
                 $process->stdout->pipe($connection);
+                $process->stderr->on('data', function ($error) {
+                    error($error);
+                });
+                $process->stdout->on('data', function ($data) use ($connection) {
+                    if (strpos($data, 'Goodbye') === false) {
+                        return;
+                    }
+                    
+                    $connection->end();
+                });
 
-                $connection->on('close', new EventLoopClose($app, $connection));
-                $connection->on('end', new EventLoopTerminate($app, $connection));
+                $connection->on('end', new EventLoopClose($app, $connection));
+                $connection->on('close', new EventLoopTerminate($app, $connection));
                 $connection->on('error', new EventLoopError($app, $connection));
 
                 $process->stdin->write(
