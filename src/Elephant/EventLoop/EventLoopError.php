@@ -20,6 +20,7 @@ class EventLoopError
 
     public function __invoke(Exception $error)
     {
+        error($error->getMessage());
         if ($this->app->config('app.debug')) {
             $this->connection->write("550 5.7.1 SCE: $error");
         } else {
