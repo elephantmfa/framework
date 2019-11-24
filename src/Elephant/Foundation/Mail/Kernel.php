@@ -23,7 +23,7 @@ class Kernel implements KernelContract
     protected $bootstrappers = [
         \Elephant\Foundation\Bootstrap\LoadEnvironmentVariables::class,
         \Elephant\Foundation\Bootstrap\LoadConfiguration::class,
-        // \Elephant\Foundation\Bootstrap\HandleExceptions::class,
+        \Elephant\Foundation\Bootstrap\HandleExceptions::class,
         \Elephant\Foundation\Bootstrap\RegisterFacades::class,
         \Elephant\Foundation\Bootstrap\RegisterProviders::class,
         \Elephant\Foundation\Bootstrap\BootProviders::class,
@@ -80,11 +80,18 @@ class Kernel implements KernelContract
     ];
 
     /**
-     * The PID of the elephant process.
+     * The timeout ticker of the process.
      *
-     * @var int
+     * @var TimerInterface
      */
-    protected $pid;
+    protected $timeout;
+
+    /**
+     * The mail instance for the application.
+     *
+     * @var \Elephant\Contracts\Mail\Mail
+     */
+    protected $mail;
 
     public function __construct(Application $app)
     {
@@ -94,7 +101,7 @@ class Kernel implements KernelContract
 
     public function bootstrap()
     {
-        if (!$this->app->hasBeenBootstrapped()) {
+        if (! $this->app->hasBeenBootstrapped()) {
             $this->app->bootstrapWith($this->bootstrappers());
         }
 
@@ -103,18 +110,26 @@ class Kernel implements KernelContract
             $this->app->stdout->close();
 
             $this->app->loop->stop();
-            $this->removePID();
-        });
-        $this->app->loop->addSignal(SIGINT, function (int $signal) {
-            $this->terminate();
-            die("\nClosing " . $this->app->config['app.name'] . " [{$this->pid}].\n");
         });
     }
 
     public function handle()
     {
-        $this->app->stdin->on('data', new EventLoopData($this->app, $this->filters));
+        $cb = new EventLoopData($this->app, $this->filters);
+        $this->app->stdin->on('data', function ($data) use ($cb) {
+            $this->app->loop->cancelTimer($this->timeout);
+            $this->timeout = $this->app->loop->addTimer(config('app.processes.timeout'), function () {
+                $this->terminate();
+            });
 
+            $cb($data);
+        });
+
+        info('Process started.');
+
+        $this->timeout = $this->app->loop->addTimer(config('app.processes.timeout'), function () {
+            $this->terminate();
+        });
         $this->app->loop->run();
     }
 
