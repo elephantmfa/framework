@@ -52,10 +52,10 @@ class Connection implements Arrayable
     public function toArray()
     {
         return [
-            'received_port' => $this->received_port,
+            'received_port' => $this->receivedPort,
             'protocol' => $this->protocol,
-            'sender_ip' => $this->sender_ip,
-            'sender_name' => $this->sender_name,
+            'sender_ip' => $this->senderIp,
+            'sender_name' => $this->senderName,
         ];
     }
 }
