@@ -113,18 +113,19 @@ class ProcessManager implements PMContract, ArrayAccess
     }
 
     /** {@inheritDoc} */
-    public function createProcess(): Process
+    public function createProcess(): string
     {
         $elephantPath = config('app.command_path', base_path('elephant'));
         $pid = sha1(Str::random() . Carbon::now()->toString());
         $command = "php {$elephantPath} subprocess:start --id=\"$pid\"";
-
         $this->processes[$pid] = new Process($command);
         $this->processes[$pid]->start($this->app->loop);
 
         $this->waitingProcesses[] = $pid;
 
-        return $this->processes[$pid];
+        info("Process [$pid] created.");
+
+        return $pid;
     }
 
     /** {@inheritDoc} */

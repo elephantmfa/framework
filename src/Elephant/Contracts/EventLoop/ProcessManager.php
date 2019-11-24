@@ -75,9 +75,9 @@ interface ProcessManager
     /**
      * Create a new waiting process.
      *
-     * @return Process
+     * @return string
      */
-    public function createProcess(): Process;
+    public function createProcess(): string;
 
     /**
      * Kill an existing process.
