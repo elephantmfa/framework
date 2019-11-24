@@ -54,7 +54,14 @@ if (!function_exists('info')) {
      */
     function info(?string $logMessage)
     {
-        echo '[' . Carbon::now() . "] $logMessage\n";
+        $pid = config('app.process_id') ?? '';
+        if (! empty($pid)) {
+            $pid = "[$pid] ";
+        }
+        app('log')->info("$pid$logMessage");
+        if (config('app.debug') && empty($pid)) {
+            echo '[' . Carbon::now() . "] $pid$logMessage\n";
+        }
     }
 }
 
@@ -67,7 +74,14 @@ if (!function_exists('error')) {
      */
     function error(?string $logMessage)
     {
-        echo '[' . Carbon::now() . "]E $logMessage\n";
+        $pid = config('app.process_id') ?? '';
+        if (! empty($pid)) {
+            $pid = "[$pid]";
+        }
+        app('log')->error("$pid$logMessage");
+        if (config('app.debug') && empty($pid)) {
+            echo '[' . Carbon::now() . "]E $pid$logMessage\n";
+        }
     }
 }
 
