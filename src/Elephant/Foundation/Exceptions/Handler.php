@@ -3,15 +3,12 @@
 namespace Elephant\Foundation\Exceptions;
 
 use Exception;
-use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Auth\AuthenticationException;
-use Illuminate\Contracts\Container\Container;
-use Elephant\Contracts\Debug\ExceptionHandler as ExceptionHandlerContract;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Session\TokenMismatchException;
 use Illuminate\Support\Arr;
-use Illuminate\Validation\ValidationException;
 use Psr\Log\LoggerInterface;
+use Illuminate\Contracts\Container\Container;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Symfony\Component\Console\Application as ConsoleApplication;
+use Illuminate\Contracts\Debug\ExceptionHandler as ExceptionHandlerContract;
 
 class Handler implements ExceptionHandlerContract
 {
@@ -35,12 +32,8 @@ class Handler implements ExceptionHandlerContract
      * @var array
      */
     protected $internalDontReport = [
-        AuthenticationException::class,
-        AuthorizationException::class,
         ModelNotFoundException::class,
         SuspiciousOperationException::class,
-        TokenMismatchException::class,
-        ValidationException::class,
     ];
 
     /**
@@ -54,14 +47,7 @@ class Handler implements ExceptionHandlerContract
         $this->container = $container;
     }
 
-    /**
-     * Report or log an exception.
-     *
-     * @param  \Exception  $e
-     * @return mixed
-     *
-     * @throws \Exception
-     */
+    /** {@inheritDoc} */
     public function report(Exception $e)
     {
         if ($this->shouldntReport($e)) {
@@ -80,27 +66,17 @@ class Handler implements ExceptionHandlerContract
 
         $logger->error(
             $e->getMessage(),
-            array_merge($this->context(), ['exception' => $e])
+            ['exception' => $e]
         );
     }
 
-    /**
-     * Determine if the exception should be reported.
-     *
-     * @param  \Exception  $e
-     * @return bool
-     */
+    /** {@inheritDoc} */
     public function shouldReport(Exception $e)
     {
         return ! $this->shouldntReport($e);
     }
 
-    /**
-     * Determine if the exception is in the "do not report" list.
-     *
-     * @param  \Exception  $e
-     * @return bool
-     */
+    /** {@inheritDoc} */
     protected function shouldntReport(Exception $e)
     {
         $dontReport = array_merge($this->dontReport, $this->internalDontReport);
@@ -111,25 +87,21 @@ class Handler implements ExceptionHandlerContract
     }
 
     /**
-     * Render an exception into a response.
+     * Render an exception into an HTTP response.
      *
+     * @param  \React\Socket\ConnectionInterface  $connection
      * @param  \Exception  $e
-     * @return \Illuminate\Http\Response|\Symfony\Component\HttpFoundation\Response
+     * @return \Symfony\Component\HttpFoundation\Response
      */
-    public function render(Exception $e)
+    public function render($connection, Exception $e)
     {
-        //
+        $connection->write($e->getMessage() . "\r\n");
     }
 
-    /**
-     * Render an exception to the console.
-     *
-     * @param  \Symfony\Component\Console\Output\OutputInterface  $output
-     * @param  \Exception  $e
-     * @return void
-     */
+    /** {@inheritDoc} */
     public function renderForConsole($output, Exception $e)
     {
-        (new ConsoleApplication)->renderException($e, $output);
+        echo $e->getMessage() . "\r\n";
+        // (new ConsoleApplication)->renderException($e, $output);
     }
 }
