@@ -104,7 +104,7 @@ class EventLoopServiceProvider extends ServiceProvider
 
                 $process->stdin->write(
                     'CONNECT remote:' . $connection->getRemoteAddress() .
-                        ' local:' . $connection->getLocalAddress()
+                        ' local:' . $connection->getLocalAddress() . "\r\n"
                 );
             });
 
