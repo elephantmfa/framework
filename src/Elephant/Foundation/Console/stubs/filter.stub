@@ -14,10 +14,10 @@ class DummyClass implements Filter
      * @param callable $next
      * @return void
      */
-    public function filter(Mail $email, $next)
+    public function filter(Mail $mail, $next)
     {
         //
 
-        return $next($email);
+        return $next($mail);
     }
 }
