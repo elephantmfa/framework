@@ -48,6 +48,9 @@ class Mail implements MailContract, Jsonable, Arrayable
      */
     public function prependHeader(string $header, string $value): MailContract
     {
+        if (! isset($this->headers[$header])) {
+            $this->headers[$header] = [];
+        }
         array_unshift($this->headers[$header], $value);
         $headerValue = "$header: $value";
 
@@ -146,8 +149,6 @@ class Mail implements MailContract, Jsonable, Arrayable
             $this->createBoundary();
         }
 
-        $this->raw .= "\n\n--{$this->boundary}\n{$body->getRaw()}";
-
         return $this;
     }
 
@@ -161,8 +162,6 @@ class Mail implements MailContract, Jsonable, Arrayable
         if (! isset($this->boundary)) {
             $this->createBoundary();
         }
-
-        $this->raw .= "\n\n--{$this->boundary}\n{$body}";
 
         return $this;
     }
@@ -218,7 +217,7 @@ class Mail implements MailContract, Jsonable, Arrayable
      */
     public function addHeader(string $header, string $value): MailContract
     {
-        $this->headers[$header][] = $value;
+        $this->headers[strtolower($header)][] = $value;
 
         return $this;
     }
@@ -441,7 +440,7 @@ class Mail implements MailContract, Jsonable, Arrayable
             'envelope' => $this->envelope->toArray(),
             'connection' => $this->connection->toArray(),
             'headers' => $this->headers,
-            'body_parts' => $this->bodyParts,
+            'body_parts' => collect($this->bodyParts)->toArray(),
         ];
     }
 

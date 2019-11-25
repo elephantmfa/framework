@@ -168,7 +168,7 @@ class EventLoopData
     protected function handleConnect(string $data)
     {
         $this->mail = $this->app->make(Mail::class);
-        if (preg_match(';CONNECT remote:\w+://(.+):\d+ local:\w+://.+(.+);', $data, $matches)) {
+        if (preg_match(';CONNECT remote:\w+://(.+):\d+ local:\w+://.+:(.+);', $data, $matches)) {
             [, $remoteIp, $localPort] = $matches;
             $this->mail->setSenderIp($remoteIp);
             $this->mail->getConnection()->receivedPort = $localPort;
@@ -447,12 +447,14 @@ class EventLoopData
      */
     protected function handleData(string $data)
     {
-        $this->mail->appendToRaw($data);
+        if (trim($data) !== '.') {
+            $this->mail->appendToRaw($data);
+        }
         if (! $this->readingBody) {
             if (Str::startsWith($data, '--' . $this->mail->getMimeBoundary()) ||
                 empty(trim($data))
             ) {
-                if (!empty($this->currentLine)) {
+                if (! empty($this->currentLine)) {
                     $this->addHeader();
                 }
                 $this->readingBody = true;
@@ -465,10 +467,7 @@ class EventLoopData
                 if (! $this->app->config['relay.unfold_headers']) {
                     $this->currentLine .= "\n" . trim($data, "\r\n");
                 } else {
-                    if (Str::endsWith($this->currentLine, ';')) {
-                        $this->currentLine .= ' ';
-                    }
-                    $this->currentLine .= trim($data);
+                    $this->currentLine .= ' ' . trim($data);
                 }
             } else {
                 if (! empty($this->currentLine)) {
@@ -481,13 +480,19 @@ class EventLoopData
         }
 
         if (Str::startsWith($data, '--' . $this->mail->getMimeBoundary()) && ! Str::endsWith($data, '--')) {
-            $this->mail->attachRaw($this->currentLine);
+            if (! empty(trim($this->currentLine))) {
+                $this->mail->attachRaw($this->currentLine);
+            }
             $this->currentLine = '';
         }
 
         if (empty($this->mail->getMimeBoundary()) && substr_count($this->currentLine, '.') > 0) {
             $this->endingMail = true;
-        } elseif (trim($data) == "--{$this->mail->getMimeBoundary()}--") {
+        }
+        if (trim($data) == "--{$this->mail->getMimeBoundary()}--") {
+            if (! empty(trim($this->currentLine))) {
+                $this->mail->attachRaw($this->currentLine);
+            }
             $this->endingMail = true;
         }
         if ($this->endingMail && empty(trim($data))) {
@@ -507,6 +512,7 @@ class EventLoopData
                     $this->say("250 2.0.0 Ok: queued as $queueId");
                 });
                 $this->mail->timings['data'] = microtime(true) - $time;
+
                 info($this->mail->toJson());
 
                 $queueProcess = $this->app->config['relay.queue_processor'] ?? 'process';
@@ -518,7 +524,7 @@ class EventLoopData
 
                 return;
             }
-            if (!empty($this->currentLine)) {
+            if (! empty(trim($this->currentLine))) {
                 $this->mail->attachRaw($this->currentLine);
             }
             $this->currentLine = '';

@@ -62,7 +62,7 @@ class BodyPart implements Arrayable
     public function toArray()
     {
         return [
-            'name' => $this->name,
+            'name' => $this->filename,
             'disposition' => $this->disposition,
             'size' => $this->size,
             'content_transfer_encoding' => $this->contentTransferEncoding,
