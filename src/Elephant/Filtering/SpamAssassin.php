@@ -51,8 +51,9 @@ class SpamAssassin implements Scanner
     {
         $this->mail = $mail;
         $this->contentLength = strlen(str_replace("\n", "\r\n", $mail->getRaw()));
-        if ($this->contentLength > config('scanners.spamassasisn.max_size')) {
-            $this->contentLength = config('scanners.spamassasisn.max_size');
+        $maxSize = config('scanners.spamassassin.max_size', 0);
+        if ($maxSize > 0 && $this->contentLength > $maxSize) {
+            $this->contentLength = $maxSize;
         }
         $this->headers = [];
     }
@@ -111,7 +112,7 @@ class SpamAssassin implements Scanner
             $socket,
             SOL_SOCKET,
             SO_SNDTIMEO,
-            ['sec' => config('scanners.spamassassin.connect_timeout')]
+            ['sec' => config('scanners.spamassassin.timeout', 10), 'usec' => 0]
         );
         if (! @socket_connect($socket, $path, $port)) {
             $this->error = "Unable to connect to socket!";
@@ -119,7 +120,7 @@ class SpamAssassin implements Scanner
             return null;
         }
 
-        if (! $this->socketWrite($socket, "REPORT SPAMC/1.2")) {
+        if (! $this->socketWrite($socket, "HEADERS SPAMC/1.2")) {
             $this->error = "Unable to write command to socket!";
 
             return null;
@@ -141,7 +142,7 @@ class SpamAssassin implements Scanner
 
             return null;
         }
-        ; // Move on from headers to message.
+        // Move on from headers to message.
         $lines = explode("\n", $this->mail->getRaw());
         $bytes = 0;
         foreach ($lines as $line) {
@@ -176,7 +177,7 @@ class SpamAssassin implements Scanner
                         if (strpos($test, '=') !== false) {
                             [$test, $score] = explode('=', $test);
                         }
-                        return ['name' => $test, 'score' => $score];
+                        return ['name' => $test, 'score' => (float) $score];
                     }, explode(',', $tests));
                     $this->results = [
                         'tests' => $tests,
