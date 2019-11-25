@@ -186,9 +186,13 @@ if (! function_exists('fold_header')) {
      */
     function fold_header(string $headerVal, int $numSpaces = 4): string
     {
-        if (preg_match('/^(.{68,78})\s+(.+)$/', $headerVal, $matches) !== false) {
-            [, $p1, $p2] = $matches;
-            $headerVal = "{$p1}\n";
+        if (preg_match('/^(.{60,78})([\r\n\t\f\v ,;]+)(.+)$/', $headerVal, $matches)) {
+            [, $p1, $sep, $p2] = $matches;
+            $headerVal = $p1;
+            if (! empty(trim($sep))) {
+                $headerVal .= $sep;
+            }
+            $headerVal .= "\n";
             for ($i=0; $i < $numSpaces; $i++) {
                 $headerVal .= ' ';
             }
