@@ -2,8 +2,9 @@
 
 namespace Elephant\Mail;
 
-use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Support\Str;
+use InvalidArgumentException;
+use Illuminate\Contracts\Support\Arrayable;
 
 class BodyPart implements Arrayable
 {
@@ -54,11 +55,21 @@ class BodyPart implements Arrayable
         return $bp;
     }
 
+    /**
+     * Get the raw format of the BodyPart.
+     *
+     * @return string
+     */
     public function getRaw(): string
     {
         return $this->raw;
     }
     
+    /**
+     * Get the attachment's metadata as an array.
+     *
+     * @return void
+     */
     public function toArray()
     {
         return [
@@ -70,11 +81,54 @@ class BodyPart implements Arrayable
         ];
     }
 
-    public function __toString()
+    /**
+     * Get the body of the BodyPart.
+     *
+     * @return void
+     */
+    public function getBody()
     {
-        return $this->raw;
+        if ($this->contentTransferEncoding == 'base64') {
+            return base64_decode($this->body);
+        }
+
+        return $this->body;
     }
 
+    /**
+     * Get one of the protected parameters.
+     *
+     * @param mixed $val
+     * @return void
+     */
+    public function __get($val)
+    {
+        if (in_array($val, ['filename', 'disposition', 'size', 'contentTransferEncoding', 'contentType'])) {
+            return $this->$val;
+        }
+
+        throw new InvalidArgumentException(
+            "\$name must be in ['filename', 'disposition', 'size', 'contentTransferEncoding', 'contentType']."
+        );
+    }
+
+    /**
+     * Convert the BodyPart into a string.
+     *
+     * @return string
+     */
+    public function __toString()
+    {
+        return $this->getBody();
+    }
+
+    /**
+     * Parse the body part data.
+     *
+     * @param BodyPart &$bp
+     * @param string $currentLine
+     * @return void
+     */
     private static function parseData(&$bp, $currentLine)
     {
         if (Str::startsWith(strtolower($currentLine), 'content-transfer-encoding')) {
