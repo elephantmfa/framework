@@ -7,7 +7,7 @@ use Elephant\Contracts\Mail\Mail;
 use Illuminate\Pipeline\Pipeline;
 use Illuminate\Contracts\Container\Container;
 use Elephant\EventLoop\Traits\CommunicateTrait;
-use Elephant\Mail\Jobs\QueueJob;
+use Elephant\Mail\Jobs\QueueProcessJob;
 use Illuminate\Support\Carbon;
 
 class EventLoopData
@@ -513,13 +513,13 @@ class EventLoopData
                 });
                 $this->mail->timings['data'] = microtime(true) - $time;
 
-                info($this->mail->toJson());
-
                 $queueProcess = $this->app->config['relay.queue_processor'] ?? 'process';
                 if ($queueProcess == 'process') {
-                    QueueJob::dispatchNow($this->mail);
-                } else {
-                    QueueJob::dispatch($this->mail);
+                    QueueProcessJob::dispatchNow($this->mail);
+                } elseif ($queueProcess == 'queue') {
+                    QueueProcessJob::dispatch($this->mail);
+                } else { // none
+                    // Transport::send($this->mail);
                 }
 
                 return;
@@ -559,7 +559,14 @@ class EventLoopData
 
         // If queueing is enabled, we need to store the mail in the queue for
         //   later processing.
-        $this->app->filesystem->disk('tmp')->put("queue/$queueId", $this->mail->getRaw());
+        $this->app->filesystem->disk('tmp')->put("queue/{$queueId}/email.eml", $this->mail->getRaw());
+        foreach ($this->mail->bodyParts as $i => $bodyPart) {
+            $name = "p{$i}";
+            if (isset($bodyPart->filename)) {
+                $name = $bodyPart->filename;
+            }
+            $this->app->filesystem->disk('tmp')->put("queue/{$queueId}/{$name}", $bodyPart->getBody());
+        }
 
         return $queueId;
     }
