@@ -55,7 +55,9 @@ class SpamAssassin implements Scanner
         if ($maxSize > 0 && $this->contentLength > $maxSize) {
             $this->contentLength = $maxSize;
         }
-        $this->headers = [];
+        $this->results = [];
+        $this->error = '';
+        $this->user = '';
     }
 
     /** {@inheritDoc} */
@@ -161,9 +163,15 @@ class SpamAssassin implements Scanner
         while ($line = @socket_read($socket, 512, PHP_NORMAL_READ)) {
             if (preg_match('/^\s+[a-z]+/i', $line)) {
                 $currentLine .= " " . trim($line);
+
                 continue;
             }
             $line = trim($line);
+            if (preg_match('/^Spam:\s+(?:False|True)\s+;\s+(\d+)\s+/\s+\d+/i', $line, $matches)) {
+                $this->results['total_score'] = $matches[1];
+
+                continue;
+            }
             if (preg_match('/^[a-z\-]+: /i', $line)) {
                 $regex = '/^X-Spam-Status: ' .
                     '(?:(?:Yes|No), score=[0-9\.\-]+ required=[0-9\.\-]+ )?' .
@@ -177,14 +185,13 @@ class SpamAssassin implements Scanner
                         if (strpos($test, '=') !== false) {
                             [$test, $score] = explode('=', $test);
                         }
+
                         return ['name' => $test, 'score' => (float) $score];
                     }, explode(',', $tests));
-                    $this->results = [
-                        'tests' => $tests,
-                        'autolearn' => strtolower($autolearn) === 'yes',
-                        'autolearn_force' => strtolower($autolearn_force) === 'yes',
-                        'version' => $version,
-                    ];
+                    $this->results['tests'] = $tests;
+                    $this->results['autolearn'] = strtolower($autolearn) === 'yes';
+                    $this->results['autolearn_force'] = strtolower($autolearn_force) === 'yes';
+                    $this->results['version'] = $version;
 
                     continue;
                 }
