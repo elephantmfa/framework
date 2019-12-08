@@ -20,9 +20,10 @@ class Envelope implements Arrayable
      * Get the protected params.
      *
      * @param string $get
-     * @return mixed
      *
      * @throws \InvalidArgumentException
+     *
+     * @return mixed
      */
     public function __get(string $name)
     {
@@ -37,10 +38,11 @@ class Envelope implements Arrayable
      * Set the protected params. Will append for recipients.
      *
      * @param string $name
-     * @param mixed $value
-     * @return void
+     * @param mixed  $value
      *
      * @throws \InvalidArgumentException
+     *
+     * @return void
      */
     public function __set(string $name, $value): void
     {
@@ -61,8 +63,8 @@ class Envelope implements Arrayable
     public function toArray()
     {
         return [
-            'helo' => $this->helo,
-            'sender' => $this->sender,
+            'helo'       => $this->helo,
+            'sender'     => $this->sender,
             'recipients' => $this->recipients,
         ];
     }

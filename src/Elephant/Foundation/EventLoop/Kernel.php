@@ -2,9 +2,9 @@
 
 namespace Elephant\Foundation\EventLoop;
 
-use Elephant\Foundation\Application;
 use Elephant\Contracts\EventLoop\Kernel as KernelContract;
 use Elephant\Contracts\EventLoop\ProcessManager;
+use Elephant\Foundation\Application;
 
 class Kernel implements KernelContract
 {
@@ -46,7 +46,7 @@ class Kernel implements KernelContract
         $this->pid = getmypid();
     }
 
-    /** {@inheritDoc} */
+    /** {@inheritdoc} */
     public function bootstrap()
     {
         if (!$this->app->hasBeenBootstrapped()) {
@@ -61,18 +61,18 @@ class Kernel implements KernelContract
             foreach ($this->servers as $server) {
                 $server->close();
             }
-            if (! @unlink(storage_path('app/run/elephant.sock'))) {
-                error('Failed to remove socket: ' . storage_path('app/run/elephant.sock'));
+            if (!@unlink(storage_path('app/run/elephant.sock'))) {
+                error('Failed to remove socket: '.storage_path('app/run/elephant.sock'));
             }
 
             foreach ($this->app[ProcessManager::class]->getProcesses() as $pid => $process) {
                 $this->app[ProcessManager::class]->killProcess($pid);
             }
-            
+
             $this->app->loop->stop();
             $this->removePID();
-            info("Closing " . $this->app->config['app.name'] . " [{$this->pid}].");
-            echo "Closing " . $this->app->config['app.name'] . " [{$this->pid}].\n";
+            info('Closing '.$this->app->config['app.name']." [{$this->pid}].");
+            echo 'Closing '.$this->app->config['app.name']." [{$this->pid}].\n";
         });
 
         $this->app->loop->addSignal(SIGINT, function (int $signal) {
@@ -80,11 +80,11 @@ class Kernel implements KernelContract
         });
     }
 
-    /** {@inheritDoc} */
+    /** {@inheritdoc} */
     public function handle()
     {
         if ($this->PIDExists()) {
-            die($this->app->config['app.name'] . " is already running.\n");
+            die($this->app->config['app.name']." is already running.\n");
         }
 
         if ($this->app->config['scanners.spamassassin.spamd.manage'] ?? false) {
@@ -99,7 +99,7 @@ class Kernel implements KernelContract
             });
         }
 
-        for ($i=0; $i < $this->app->config['app.processes.min']; $i++) {
+        for ($i = 0; $i < $this->app->config['app.processes.min']; $i++) {
             $this->app[ProcessManager::class]->createProcess();
         }
 
@@ -116,7 +116,7 @@ class Kernel implements KernelContract
         $this->app->loop->run();
     }
 
-    /** {@inheritDoc} */
+    /** {@inheritdoc} */
     public function terminate()
     {
         $this->app->terminate();
@@ -163,7 +163,7 @@ class Kernel implements KernelContract
     }
 
     /**
-     * Gets the PID from the PID file
+     * Gets the PID from the PID file.
      *
      * @return int
      */
@@ -173,7 +173,7 @@ class Kernel implements KernelContract
     }
 
     /**
-     * Gets the PID from the PID file
+     * Gets the PID from the PID file.
      *
      * @return bool
      */

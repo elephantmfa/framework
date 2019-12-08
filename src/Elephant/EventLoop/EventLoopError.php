@@ -3,8 +3,8 @@
 namespace Elephant\EventLoop;
 
 use Exception;
-use React\Socket\ConnectionInterface;
 use Illuminate\Contracts\Container\Container;
+use React\Socket\ConnectionInterface;
 
 class EventLoopError
 {

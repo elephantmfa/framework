@@ -4,13 +4,14 @@ namespace Elephant\Filtering\Exception;
 
 use Exception;
 
-class RejectException extends Exception
+class RejectEception extends Exception
 {
     /**
-     * Create a new QuarantineException
+     * Create a new QuarantineException.
      *
      * @param string $message
-     * @param int $code
+     * @param int    $code
+     *
      * @return void
      */
     public function __construct(string $message = 'Not ok', int $code = 550)

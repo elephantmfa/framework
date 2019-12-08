@@ -28,7 +28,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function appendHeader(string $header, string $value): MailContract
     {
@@ -44,11 +44,11 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function prependHeader(string $header, string $value): MailContract
     {
-        if (! isset($this->headers[$header])) {
+        if (!isset($this->headers[$header])) {
             $this->headers[$header] = [];
         }
         array_unshift($this->headers[$header], $value);
@@ -72,12 +72,12 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function alterHeader(string $header, callable $alteration, ?int $which = null): MailContract
     {
         $which = $which ?? $this->getNewestHeaderIndex($header);
-        if (! isset($this->headers[$header][$which])) {
+        if (!isset($this->headers[$header][$which])) {
             $this->appendHeader($header, '--');
         }
         $value = $this->headers[$header][$which] = $alteration($this->headers[$header][$which]);
@@ -112,7 +112,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function deleteHeader(string $header, ?int $which = null): MailContract
     {
@@ -139,13 +139,13 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function attach(BodyPart $body): MailContract
     {
         $this->bodyParts[] = $body;
 
-        if (! isset($this->boundary)) {
+        if (!isset($this->boundary)) {
             $this->createBoundary();
         }
 
@@ -153,13 +153,13 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function attachRaw(string $body): MailContract
     {
         $this->bodyParts[] = BodyPart::fromRaw($body);
 
-        if (! isset($this->boundary)) {
+        if (!isset($this->boundary)) {
             $this->createBoundary();
         }
 
@@ -167,7 +167,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function bcc(string $recipient): MailContract
     {
@@ -177,14 +177,14 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function cc(string $recipient): MailContract
     {
         $this->envelope->recipient = $recipient;
         if (isset($this->headers['cc'])) {
             $this->alterHeader('cc', function ($header) use ($recipient) {
-                return $header . ", <{$recipient}>";
+                return $header.", <{$recipient}>";
             });
         } else {
             $this->prependHeader('cc', "<{$recipient}>");
@@ -194,13 +194,13 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function setFinalDestination(string $destination): MailContract
     {
-        if (! in_array($destination, ['allow', 'reject', 'defer', 'quarantine', 'drop']) &&
-            ! validate_ip($destination) &&
-            ! validate_ip($destination, true)
+        if (!in_array($destination, ['allow', 'reject', 'defer', 'quarantine', 'drop']) &&
+            !validate_ip($destination) &&
+            !validate_ip($destination, true)
         ) {
             throw new InvalidArgumentException(
                 "\$destination must be an IP, IP:port or ['allow', 'reject', 'defer', 'quarantine', 'drop']"
@@ -211,9 +211,8 @@ class Mail implements MailContract, Jsonable, Arrayable
         return $this;
     }
 
-
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function addHeader(string $header, string $value): MailContract
     {
@@ -223,7 +222,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function setHelo(string $helo): MailContract
     {
@@ -233,7 +232,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function setSenderIp(string $ip): MailContract
     {
@@ -243,7 +242,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function setSenderName(string $name): MailContract
     {
@@ -253,7 +252,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function setProtocol(string $protocol): MailContract
     {
@@ -263,7 +262,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function addRecipient(string $recipient): MailContract
     {
@@ -273,7 +272,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function setSender(string $sender): MailContract
     {
@@ -283,7 +282,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function setQueueId(string $queueId): MailContract
     {
@@ -293,7 +292,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function setMimeBoundary(string $boundary): MailContract
     {
@@ -302,24 +301,24 @@ class Mail implements MailContract, Jsonable, Arrayable
         return $this;
     }
 
-
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function getHeader(?string $header = null): array
     {
-        if (! isset($header)) {
+        if (!isset($header)) {
             return $this->headers;
         }
+
         return $this->headers[$header] ?? [];
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function getNewestHeaderIndex(string $header): int
     {
-        if (! isset($this->headers[$header])) {
+        if (!isset($this->headers[$header])) {
             return 0;
         }
         $c = count($this->headers[$header]) - 1;
@@ -328,7 +327,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function getHelo(): ?string
     {
@@ -336,7 +335,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function getSenderIp(): string
     {
@@ -344,7 +343,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function getSenderName(): string
     {
@@ -352,7 +351,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function getProtocol(): string
     {
@@ -360,7 +359,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function getRecipients(): ?array
     {
@@ -368,7 +367,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function getSender(): ?string
     {
@@ -382,12 +381,12 @@ class Mail implements MailContract, Jsonable, Arrayable
      */
     public function getQueueId(): ?string
     {
-        if (! isset($this->queueId)) {
+        if (!isset($this->queueId)) {
             $queueId = sha1(
-                strtoupper(Str::random()) .
-                    Carbon::now()->toString() .
-                    $this->getHelo() .
-                    $this->getSenderIp() .
+                strtoupper(Str::random()).
+                    Carbon::now()->toString().
+                    $this->getHelo().
+                    $this->getSenderIp().
                     $this->getSender()
             );
 
@@ -398,16 +397,15 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function getMimeBoundary(): ?string
     {
         return $this->boundary;
     }
 
-
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function appendToRaw(string $rawData): MailContract
     {
@@ -417,7 +415,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function getRaw(): ?string
     {
@@ -425,7 +423,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function setConnection(Connection $connection): MailContract
     {
@@ -435,7 +433,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function getConnection(): Connection
     {
@@ -443,21 +441,21 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function toArray()
     {
         return [
-            'queue_id' => $this->queueId,
-            'envelope' => $this->envelope->toArray(),
+            'queue_id'   => $this->queueId,
+            'envelope'   => $this->envelope->toArray(),
             'connection' => $this->connection->toArray(),
-            'headers' => $this->headers,
+            'headers'    => $this->headers,
             'body_parts' => collect($this->bodyParts)->toArray(),
         ];
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritdoc}
      */
     public function toJson($options = 0)
     {
@@ -474,7 +472,6 @@ class Mail implements MailContract, Jsonable, Arrayable
         return $this->raw;
     }
 
-
     /**
      * Create a new MIME boundary for the message.
      *
@@ -482,7 +479,7 @@ class Mail implements MailContract, Jsonable, Arrayable
      */
     protected function createBoundary(): void
     {
-        $boundary = '=' . Str::random(16) . '=';
+        $boundary = '='.Str::random(16).'=';
         $this->setMimeBoundary($boundary);
         $this->alterHeader('content-type', function ($header) use ($boundary) {
             return "multipart/mixed; boundary=\"$boundary\"";

@@ -33,7 +33,7 @@ class ProcessManager implements PMContract, ArrayAccess
 
     /**
      * Array mapping `pid => handled count`.
-     * 
+     *
      * @var array
      */
     public $processHandled;
@@ -50,20 +50,19 @@ class ProcessManager implements PMContract, ArrayAccess
         $this->waitingProcesses = [];
     }
 
-
-    /** {@inheritDoc} */
+    /** {@inheritdoc} */
     public function getProcesses(): array
     {
         return $this->processes;
     }
 
-    /** {@inheritDoc} */
+    /** {@inheritdoc} */
     public function getProcessCount(): int
     {
-        return sizeof($this->processes);
+        return count($this->processes);
     }
 
-    /** {@inheritDoc} */
+    /** {@inheritdoc} */
     public function getWaiting(): array
     {
         return array_filter($this->processes, function ($process, $pid) {
@@ -71,33 +70,33 @@ class ProcessManager implements PMContract, ArrayAccess
         }, ARRAY_FILTER_USE_BOTH);
     }
 
-    /** {@inheritDoc} */
+    /** {@inheritdoc} */
     public function getNextWaitingPid(): string
     {
         return array_pop($this->waitingProcesses) ?? '';
     }
 
-    /** {@inheritDoc} */
+    /** {@inheritdoc} */
     public function getWaitingCount(): int
     {
         return count($this->waitingProcesses);
     }
 
-    /** {@inheritDoc} */
+    /** {@inheritdoc} */
     public function getBusy(): array
     {
         return array_filter($this->processes, function ($process, $pid) {
-            return ! in_array($pid, $this->waitingProcesses);
+            return !in_array($pid, $this->waitingProcesses);
         }, ARRAY_FILTER_USE_BOTH);
     }
 
-    /** {@inheritDoc} */
+    /** {@inheritdoc} */
     public function markWaiting(string $pid): void
     {
         $this->waitingProcesses[] = $pid;
     }
 
-    /** {@inheritDoc} */
+    /** {@inheritdoc} */
     public function markBusy(string $pid): void
     {
         foreach ($this->waitingProcesses as $index => $process_id) {
@@ -109,7 +108,7 @@ class ProcessManager implements PMContract, ArrayAccess
         }
     }
 
-    /** {@inheritDoc} */
+    /** {@inheritdoc} */
     public function getProcess(string $pid): Process
     {
         foreach ($this->processes as $process_id => $process) {
@@ -119,11 +118,11 @@ class ProcessManager implements PMContract, ArrayAccess
         }
     }
 
-    /** {@inheritDoc} */
+    /** {@inheritdoc} */
     public function createProcess(): string
     {
         $elephantPath = config('app.command_path', base_path('elephant'));
-        $pid = sha1(Str::random() . Carbon::now()->toString());
+        $pid = sha1(Str::random().Carbon::now()->toString());
         $command = "php {$elephantPath} subprocess:start --id=\"$pid\"";
         $this->processes[$pid] = new Process($command);
         $this->processes[$pid]->start($this->app->loop);
@@ -134,7 +133,7 @@ class ProcessManager implements PMContract, ArrayAccess
         return $pid;
     }
 
-    /** {@inheritDoc} */
+    /** {@inheritdoc} */
     public function killProcess(string $pid): bool
     {
         $this->markBusy($pid);
@@ -155,25 +154,25 @@ class ProcessManager implements PMContract, ArrayAccess
         return $return;
     }
 
-    /** {@inheritDoc} */
+    /** {@inheritdoc} */
     public function offsetExists($offset) : bool
     {
         return isset($this->processes[$offset]);
     }
 
-    /** {@inheritDoc} */
+    /** {@inheritdoc} */
     public function offsetGet($offset)
     {
         return $this->processes[$offset];
     }
 
-    /** {@inheritDoc} */
+    /** {@inheritdoc} */
     public function offsetSet($offset, $value): void
     {
         throw new \Exception('Unable to set a new process. Please use ProcessManager::create() instead.');
     }
 
-    /** {@inheritDoc} */
+    /** {@inheritdoc} */
     public function offsetUnset($offset): void
     {
         if ($this->offsetExists($offset)) {

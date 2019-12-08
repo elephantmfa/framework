@@ -3,12 +3,12 @@
 namespace Elephant\Foundation\Exceptions;
 
 use Exception;
+use Illuminate\Contracts\Container\Container;
+use Illuminate\Contracts\Debug\ExceptionHandler as ExceptionHandlerContract;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Arr;
 use Psr\Log\LoggerInterface;
-use Illuminate\Contracts\Container\Container;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Symfony\Component\Console\Application as ConsoleApplication;
-use Illuminate\Contracts\Debug\ExceptionHandler as ExceptionHandlerContract;
 
 class Handler implements ExceptionHandlerContract
 {
@@ -39,7 +39,8 @@ class Handler implements ExceptionHandlerContract
     /**
      * Create a new exception handler instance.
      *
-     * @param  \Illuminate\Contracts\Container\Container  $container
+     * @param \Illuminate\Contracts\Container\Container $container
+     *
      * @return void
      */
     public function __construct(Container $container)
@@ -47,7 +48,7 @@ class Handler implements ExceptionHandlerContract
         $this->container = $container;
     }
 
-    /** {@inheritDoc} */
+    /** {@inheritdoc} */
     public function report(Exception $e)
     {
         if ($this->shouldntReport($e)) {
@@ -70,18 +71,18 @@ class Handler implements ExceptionHandlerContract
         );
     }
 
-    /** {@inheritDoc} */
+    /** {@inheritdoc} */
     public function shouldReport(Exception $e)
     {
-        return ! $this->shouldntReport($e);
+        return !$this->shouldntReport($e);
     }
 
-    /** {@inheritDoc} */
+    /** {@inheritdoc} */
     protected function shouldntReport(Exception $e)
     {
         $dontReport = array_merge($this->dontReport, $this->internalDontReport);
 
-        return ! is_null(Arr::first($dontReport, function ($type) use ($e) {
+        return !is_null(Arr::first($dontReport, function ($type) use ($e) {
             return $e instanceof $type;
         }));
     }
@@ -89,19 +90,20 @@ class Handler implements ExceptionHandlerContract
     /**
      * Render an exception into an HTTP response.
      *
-     * @param  \React\Socket\ConnectionInterface  $connection
-     * @param  \Exception  $e
+     * @param \React\Socket\ConnectionInterface $connection
+     * @param \Exception                        $e
+     *
      * @return \Symfony\Component\HttpFoundation\Response
      */
     public function render($connection, Exception $e)
     {
-        $connection->write($e->getMessage() . "\r\n");
+        $connection->write($e->getMessage()."\r\n");
     }
 
-    /** {@inheritDoc} */
+    /** {@inheritdoc} */
     public function renderForConsole($output, Exception $e)
     {
-        echo $e->getMessage() . "\r\n";
+        echo $e->getMessage()."\r\n";
         // (new ConsoleApplication)->renderException($e, $output);
     }
 }

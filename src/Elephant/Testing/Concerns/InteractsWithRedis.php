@@ -2,8 +2,8 @@
 
 namespace Elephant\Testing\Concerns;
 
-use Exception;
 use Elephant\Foundation\Application;
+use Exception;
 use Illuminate\Redis\RedisManager;
 
 trait InteractsWithRedis
@@ -29,11 +29,11 @@ trait InteractsWithRedis
      */
     public function setUpRedis()
     {
-        $app = $this->app ?? new Application;
+        $app = $this->app ?? new Application();
         $host = getenv('REDIS_HOST') ?: '127.0.0.1';
         $port = getenv('REDIS_PORT') ?: 6379;
 
-        if (! extension_loaded('redis')) {
+        if (!extension_loaded('redis')) {
             $this->markTestSkipped(
                 'The redis extension is not installed. Please install the extension to enable '.__CLASS__
             );
@@ -54,10 +54,10 @@ trait InteractsWithRedis
                     'prefix' => 'test_',
                 ],
                 'default' => [
-                    'host' => $host,
-                    'port' => $port,
+                    'host'     => $host,
+                    'port'     => $port,
                     'database' => 5,
-                    'timeout' => 0.5,
+                    'timeout'  => 0.5,
                 ],
             ]);
         }
@@ -102,7 +102,8 @@ trait InteractsWithRedis
     /**
      * Run test if redis is available.
      *
-     * @param  callable  $callback
+     * @param callable $callback
+     *
      * @return void
      */
     public function ifRedisAvailable($callback)

@@ -36,7 +36,7 @@ class ModelMakeCommand extends GeneratorCommand
      */
     public function handle()
     {
-        if (parent::handle() === false && ! $this->option('force')) {
+        if (parent::handle() === false && !$this->option('force')) {
             return false;
         }
 
@@ -64,7 +64,7 @@ class ModelMakeCommand extends GeneratorCommand
         $factory = Str::studly(class_basename($this->argument('name')));
 
         $this->call('make:factory', [
-            'name' => "{$factory}Factory",
+            'name'    => "{$factory}Factory",
             '--model' => $this->qualifyClass($this->getNameInput()),
         ]);
     }
@@ -83,7 +83,7 @@ class ModelMakeCommand extends GeneratorCommand
         }
 
         $this->call('make:migration', [
-            'name' => "create_{$table}_table",
+            'name'     => "create_{$table}_table",
             '--create' => $table,
         ]);
     }
@@ -114,7 +114,7 @@ class ModelMakeCommand extends GeneratorCommand
                 'all',
                 'a',
                 InputOption::VALUE_NONE,
-                'Generate a migration and factory for the model'
+                'Generate a migration and factory for the model',
             ],
 
             ['factory', 'f', InputOption::VALUE_NONE, 'Create a new factory for the model'],
@@ -127,7 +127,7 @@ class ModelMakeCommand extends GeneratorCommand
                 'pivot',
                 'p',
                 InputOption::VALUE_NONE,
-                'Indicates if the generated model should be a custom intermediate table model'
+                'Indicates if the generated model should be a custom intermediate table model',
             ],
         ];
     }

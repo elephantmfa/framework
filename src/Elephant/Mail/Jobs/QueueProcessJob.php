@@ -4,8 +4,8 @@ namespace Elephant\Mail\Jobs;
 
 use Elepahnt\Mail\Transport;
 use Elephant\Contracts\Mail\Mail;
-use Illuminate\Bus\Queueable;
 use Elephant\Foundation\Bus\Dispatchable;
+use Illuminate\Bus\Queueable;
 
 class QueueProcessJob
 {
@@ -47,6 +47,7 @@ class QueueProcessJob
      * and DropException throws and will act upon them as necessary.
      *
      * @param callable $handleMethod
+     *
      * @return void
      */
     private function handleWrapper(callable $handleMethod): void

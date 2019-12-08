@@ -2,8 +2,8 @@
 
 namespace Elephant\Mail;
 
-use InvalidArgumentException;
 use Illuminate\Contracts\Support\Arrayable;
+use InvalidArgumentException;
 
 class Connection implements Arrayable
 {
@@ -16,9 +16,10 @@ class Connection implements Arrayable
      * Get the protected params.
      *
      * @param string $get
-     * @return mixed
      *
      * @throws \InvalidArgumentException
+     *
+     * @return mixed
      */
     public function __get(string $name)
     {
@@ -33,16 +34,17 @@ class Connection implements Arrayable
      * Set the protected params.
      *
      * @param string $name
-     * @param mixed $value
-     * @return void
+     * @param mixed  $value
      *
      * @throws \InvalidArgumentException
+     *
+     * @return void
      */
     public function __set(string $name, $value): void
     {
-        if (in_array($name, ['receivedPort', 'protocol', 'senderIp', 'senderName',])) {
+        if (in_array($name, ['receivedPort', 'protocol', 'senderIp', 'senderName'])) {
             $this->$name = $value;
-            
+
             return;
         }
 
@@ -53,9 +55,9 @@ class Connection implements Arrayable
     {
         return [
             'received_port' => $this->receivedPort,
-            'protocol' => $this->protocol,
-            'sender_ip' => $this->senderIp,
-            'sender_name' => $this->senderName,
+            'protocol'      => $this->protocol,
+            'sender_ip'     => $this->senderIp,
+            'sender_name'   => $this->senderName,
         ];
     }
 }

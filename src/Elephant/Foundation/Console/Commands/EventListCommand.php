@@ -65,12 +65,13 @@ class EventListCommand extends Command
     /**
      * Filter the given events using the provided event name filter.
      *
-     * @param  array  $events
+     * @param array $events
+     *
      * @return array
      */
     protected function filterEvents(array $events)
     {
-        if (! $eventName = $this->option('event')) {
+        if (!$eventName = $this->option('event')) {
             return $events;
         }
 
@@ -86,6 +87,6 @@ class EventListCommand extends Command
      */
     protected function filteringByEvent()
     {
-        return ! empty($this->option('event'));
+        return !empty($this->option('event'));
     }
 }
