@@ -2,6 +2,7 @@
 
 namespace Elephant\EventLoop\Mail;
 
+use Elepahnt\Mail\Transport;
 use Illuminate\Support\Str;
 use Elephant\Contracts\Mail\Mail;
 use Illuminate\Pipeline\Pipeline;
@@ -515,11 +516,11 @@ class EventLoopData
 
                 $queueProcess = $this->app->config['relay.queue_processor'] ?? 'process';
                 if ($queueProcess == 'process') {
-                    QueueProcessJob::dispatchNow($this->mail);
+                    QueueProcessJob::dispatchNow($this->mail, $this->filters);
                 } elseif ($queueProcess == 'queue') {
-                    QueueProcessJob::dispatch($this->mail);
+                    QueueProcessJob::dispatch($this->mail, $this->filters);
                 } else { // none
-                    // Transport::send($this->mail);
+                    Transport::send($this->mail);
                 }
 
                 return;

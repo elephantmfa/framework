@@ -2,6 +2,7 @@
 
 namespace Elephant\Mail\Jobs;
 
+use Elepahnt\Mail\Transport;
 use Elephant\Contracts\Mail\Mail;
 use Illuminate\Bus\Queueable;
 use Elephant\Foundation\Bus\Dispatchable;
@@ -17,7 +18,7 @@ class QueueProcessJob
      *
      * @return void
      */
-    public function __construct(Mail $mail)
+    public function __construct(Mail $mail, array $filters)
     {
         $this->mail = $mail;
     }
@@ -29,6 +30,37 @@ class QueueProcessJob
      */
     public function handle()
     {
-        //
+        $this->handleWrapper(function () {
+            $this->mail = (new Pipeline($this->app))
+                ->send($this->mail)
+                ->via('filter')
+                ->through($this->filters['queued'] ?? [])
+                ->thenReturn();
+        });
+
+        Transport::send($this->mail);
+    }
+
+    /**
+     * A wrapper for handle methods to DRY up each handle method.
+     * This will catch RejectException, DeferException, QuarantineException
+     * and DropException throws and will act upon them as necessary.
+     *
+     * @param callable $handleMethod
+     * @return void
+     */
+    private function handleWrapper(callable $handleMethod): void
+    {
+        try {
+            $handleMethod();
+        } catch (RejectException $reject) {
+            $this->mail->setFinalDestination('reject');
+        } catch (DeferException $defer) {
+            $this->mail->setFinalDestination('defer');
+        } catch (QuarantineException $quarantine) {
+            $this->mail->setFinalDestination('quarantine');
+        } catch (DropException $drop) {
+            $this->mail->setFinalDestination('drop');
+        }
     }
 }
