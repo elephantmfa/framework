@@ -442,9 +442,25 @@ class Mail implements MailContract, Jsonable, Arrayable
         return $this->connection;
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** {@inheritDoc} */
+    public function removeAllRecipients(): MailContract
+    {
+        foreach ($this->getRecipients() as $recipient) {
+            $this->removeRecipient($recipient);
+        }
+
+        return $this;
+    }
+
+    /** {@inheritDoc} */
+    public function removeRecipient(string $recipient): MailContract
+    {
+        $this->envelope->removeRecipient($recipient);
+
+        return $this;
+    }
+
+    /** {@inheritDoc} */
     public function toArray()
     {
         return [

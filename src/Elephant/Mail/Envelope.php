@@ -58,6 +58,17 @@ class Envelope implements Arrayable
         throw new InvalidArgumentException("\$name must be in ['helo', 'sender', 'recipients'].");
     }
 
+    public function removeRecipient(string $recipient): void
+    {
+        /** @var string $value */
+        foreach ($this->recipients as $key => $value) {
+            if ($value === $recipient) {
+                unset($this->recipients[$key]);
+            }
+        }
+    }
+
+    /** {@inheritDoc} */
     public function toArray()
     {
         return [

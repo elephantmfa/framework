@@ -14,7 +14,7 @@ interface Mail
      * @return \Elephant\Contracts\Mail\Mail
      */
     public function appendHeader(string $header, string $value): Mail;
-    
+
     /**
      * Add a header at the bottom of the headers of the mail message;
      *
@@ -60,7 +60,7 @@ interface Mail
      * @return \Elephant\Contracts\Mail\Mail
      */
     public function attachRaw(string $body): Mail;
-    
+
     /**
      * Add an email address to BCC. This will not appear in the headers.
      *
@@ -68,7 +68,7 @@ interface Mail
      * @return \Elephant\Contracts\Mail\Mail
      */
     public function bcc(string $recipient): Mail;
-    
+
     /**
      * Add an email address to CC. This will appear in the headers.
      *
@@ -125,7 +125,7 @@ interface Mail
      * @return \Elephant\Contracts\Mail\Mail
      */
     public function setSenderName(string $name): Mail;
-    
+
     /**
      * Set the protocol for the message. Will be either SMTP or ESMTP.
      *
@@ -222,7 +222,7 @@ interface Mail
      * @return string|null
      */
     public function getSender(): ?string;
-    
+
     /**
      * Get the queue ID of the message.
      *
@@ -252,4 +252,19 @@ interface Mail
      * @return string|null
      */
     public function getRaw(): ?string;
+
+    /**
+     * Removes all recipients from the mail.
+     *
+     * @return \Elephant\Contracts\Mail\Mail
+     */
+    public function removeAllRecipients(): Mail;
+
+    /**
+     * Removes a specified recipient.
+     *
+     * @param string $recipient
+     * @return \Elephant\Contracts\Mail\Mail
+     */
+    public function removeRecipient(string $recipient): Mail;
 }
