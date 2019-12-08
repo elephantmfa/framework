@@ -1,5 +1,10 @@
-php:
-  preset: laravel
-  finder:
-    not-name:
-      - typed-properties.php
+
+preset: laravel
+risky: true
+finder:
+  exclude:
+    - vendor
+    - tests
+  name: "*.php"
+enabled:
+  - not_operator_with_successor_space
