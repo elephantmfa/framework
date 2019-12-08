@@ -382,6 +382,18 @@ class Mail implements MailContract, Jsonable, Arrayable
      */
     public function getQueueId(): ?string
     {
+        if (! isset($this->queueId)) {
+            $queueId = sha1(
+                strtoupper(Str::random()) .
+                    Carbon::now()->toString() .
+                    $this->getHelo() .
+                    $this->getSenderIp() .
+                    $this->getSender()
+            );
+
+            $this->setQueueId($queueId);
+        }
+
         return $this->queueId;
     }
 
