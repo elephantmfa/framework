@@ -9,8 +9,8 @@ abstract class TestCase extends BaseTestCase
 {
     public function createApplication()
     {
-        if (! file_exists(__DIR__ . '/bootstrap/cache')) {
-            mkdir(__DIR__ . '/bootstrap/cache', 0777, true);
+        if (!file_exists(__DIR__.'/bootstrap/cache')) {
+            mkdir(__DIR__.'/bootstrap/cache', 0777, true);
         }
         $this->app = new \Elephant\Foundation\Application(__DIR__);
 

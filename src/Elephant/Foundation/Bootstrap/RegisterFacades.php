@@ -2,9 +2,9 @@
 
 namespace Elephant\Foundation\Bootstrap;
 
-use Illuminate\Contracts\Foundation\Application;
 use Elephant\Foundation\AliasLoader;
 use Elephant\Foundation\PackageManifest;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Facades\Facade;
 
 class RegisterFacades
@@ -12,7 +12,8 @@ class RegisterFacades
     /**
      * Bootstrap the given application.
      *
-     * @param  \Illuminate\Contracts\Foundation\Application  $app
+     * @param \Illuminate\Contracts\Foundation\Application $app
+     *
      * @return void
      */
     public function bootstrap(Application $app)

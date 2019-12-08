@@ -7,10 +7,11 @@ use Exception;
 class DeferException extends Exception
 {
     /**
-     * Create a new QuarantineException
+     * Create a new QuarantineException.
      *
      * @param string $message
-     * @param int $code
+     * @param int    $code
+     *
      * @return void
      */
     public function __construct(string $message = 'Try again later', int $code = 450)

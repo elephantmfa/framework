@@ -3,13 +3,13 @@
 namespace Elephant\EventLoop\Mail;
 
 use Elepahnt\Mail\Transport;
-use Illuminate\Support\Str;
 use Elephant\Contracts\Mail\Mail;
-use Illuminate\Pipeline\Pipeline;
-use Illuminate\Contracts\Container\Container;
 use Elephant\EventLoop\Traits\CommunicateTrait;
 use Elephant\Mail\Jobs\QueueProcessJob;
+use Illuminate\Contracts\Container\Container;
+use Illuminate\Pipeline\Pipeline;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 
 class EventLoopData
 {
@@ -60,7 +60,7 @@ class EventLoopData
     /**
      * Whether or not the mail messages is likely ending.
      *
-     * @var boolean
+     * @var bool
      */
     protected $endingMail = false;
 
@@ -68,9 +68,10 @@ class EventLoopData
      * Builds the event loop data invokable class.
      *
      * @param \Illuminate\Contracts\Container\Container $app
-     * @param \React\Socket\ConnectionInterface $connection
-     * @param \Elephant\Contracts\Mail\Mail $mail
-     * @param array $filters
+     * @param \React\Socket\ConnectionInterface         $connection
+     * @param \Elephant\Contracts\Mail\Mail             $mail
+     * @param array                                     $filters
+     *
      * @return void
      */
     public function __construct(Container $app, array $filters)
@@ -86,6 +87,7 @@ class EventLoopData
      * Run the event loop step.
      *
      * @param string $data
+     *
      * @return void
      */
     public function __invoke($data)
@@ -110,6 +112,7 @@ class EventLoopData
      * Handle the processing.
      *
      * @param string $data
+     *
      * @return void
      */
     protected function handle(string $data)
@@ -164,6 +167,7 @@ class EventLoopData
      * Handle the connection of an SMTP client.
      *
      * @param string $data
+     *
      * @return void
      */
     protected function handleConnect(string $data)
@@ -183,11 +187,11 @@ class EventLoopData
                 ->via('filter')
                 ->through($this->filters['connect'] ?? [])
                 ->thenReturn();
-            $this->say('220 ' . $this->app->config['relay.greeting_banner'] ?? 'Welcome to ElephantMFA ESMTP');
+            $this->say('220 '.$this->app->config['relay.greeting_banner'] ?? 'Welcome to ElephantMFA ESMTP');
         });
 
         $this->app->loop->addTimer($this->app->config['relay.timeout'], function () {
-            $this->close('421 4.4.2 ' . $this->app->config['app.name'] . ' Error: timeout exceeded');
+            $this->close('421 4.4.2 '.$this->app->config['app.name'].' Error: timeout exceeded');
         });
     }
 
@@ -195,6 +199,7 @@ class EventLoopData
      * Handle the `QUIT` SMTP command.
      *
      * @param string $data
+     *
      * @return void
      */
     protected function handleUnknownCommand(string $data)
@@ -206,6 +211,7 @@ class EventLoopData
      * Handle the `QUIT` SMTP command.
      *
      * @param string $data
+     *
      * @return void
      */
     protected function handleQuit(string $data)
@@ -217,6 +223,7 @@ class EventLoopData
      * Handle the `NOOP` SMTP command.
      *
      * @param string $data
+     *
      * @return void
      */
     protected function handleNoop(string $data)
@@ -228,6 +235,7 @@ class EventLoopData
      * Handle the `STARTTLS` SMTP command.
      *
      * @param string $data
+     *
      * @return void
      */
     protected function handleTls(string $data)
@@ -239,6 +247,7 @@ class EventLoopData
      * Handle the `RSET` SMTP command.
      *
      * @param string $data
+     *
      * @return void
      */
     protected function handleReset(string $data)
@@ -254,6 +263,7 @@ class EventLoopData
      * Handle the `VRFY` SMTP command.
      *
      * @param string $data
+     *
      * @return void
      */
     protected function handleVerify(string $data)
@@ -265,12 +275,13 @@ class EventLoopData
      * Handles the `HELO` and `EHLO` commands.
      *
      * @param string $helo
+     *
      * @return void
      */
     protected function handleHelo(string $helo)
     {
         $time = microtime(true);
-        if (! empty($this->mail->getSender())) {
+        if (!empty($this->mail->getSender())) {
             $nmail = $this->app[Mail::class];
             $nmail->setConnection($this->mail->getConnection());
             $nmail->setHelo($this->mail->getHelo() ?? '');
@@ -285,14 +296,14 @@ class EventLoopData
                 ->through($this->filters['helo'] ?? [])
                 ->thenReturn();
             if (Str::startsWith(strtolower($helo), 'helo')) {
-                $this->say('250 ' . config('app.name', 'ElephantMFA ESMTP'));
+                $this->say('250 '.config('app.name', 'ElephantMFA ESMTP'));
             } else {
-                $this->say('250-' . config('app.name', 'ElephantMFA ESMTP'))
-                    ->say("250-ENHANCEDSTATUSCODES")
-                    ->say("250-PIPELINING")
+                $this->say('250-'.config('app.name', 'ElephantMFA ESMTP'))
+                    ->say('250-ENHANCEDSTATUSCODES')
+                    ->say('250-PIPELINING')
                     ->say('250-SMTPUTF8')
                     ->say('250-8BITMIME')
-                    ->say("250 XFORWARD");
+                    ->say('250 XFORWARD');
             }
         });
         $this->mail->timings['helo'] = microtime(true) - $time;
@@ -302,6 +313,7 @@ class EventLoopData
      * Handles the `MAIL` command.
      *
      * @param string $envelope_from
+     *
      * @return void
      */
     protected function handleMailFrom(string $envelope_from)
@@ -336,6 +348,7 @@ class EventLoopData
      * Handles the `MAIL` command.
      *
      * @param string $envelope_to
+     *
      * @return void
      */
     protected function handleRcptTo(string $envelope_to)
@@ -346,7 +359,7 @@ class EventLoopData
 
             return;
         }
-        
+
         if (strpos($envelope_to, ':') === false) {
             $this->say('501 5.5.4 Syntax: RCPT TO:<address>');
 
@@ -417,7 +430,7 @@ class EventLoopData
                     ->thenReturn();
                 $returnOk = true;
             });
-            if (! $returnOk) {
+            if (!$returnOk) {
                 $this->mail->timings['xforward'] = microtime(true) - $time;
 
                 return;
@@ -444,6 +457,7 @@ class EventLoopData
      * Handle filling the data from the `DATA` command.
      *
      * @param string $data
+     *
      * @return void
      */
     protected function handleData(string $data)
@@ -451,11 +465,11 @@ class EventLoopData
         if (trim($data) !== '.') {
             $this->mail->appendToRaw($data);
         }
-        if (! $this->readingBody) {
-            if (Str::startsWith($data, '--' . $this->mail->getMimeBoundary()) ||
+        if (!$this->readingBody) {
+            if (Str::startsWith($data, '--'.$this->mail->getMimeBoundary()) ||
                 empty(trim($data))
             ) {
-                if (! empty($this->currentLine)) {
+                if (!empty($this->currentLine)) {
                     $this->addHeader();
                 }
                 $this->readingBody = true;
@@ -465,13 +479,13 @@ class EventLoopData
             }
 
             if (preg_match('/^\s+\S/', $data)) {
-                if (! $this->app->config['relay.unfold_headers']) {
-                    $this->currentLine .= "\n" . trim($data, "\r\n");
+                if (!$this->app->config['relay.unfold_headers']) {
+                    $this->currentLine .= "\n".trim($data, "\r\n");
                 } else {
-                    $this->currentLine .= ' ' . trim($data);
+                    $this->currentLine .= ' '.trim($data);
                 }
             } else {
-                if (! empty($this->currentLine)) {
+                if (!empty($this->currentLine)) {
                     $this->addHeader();
                 }
                 $this->currentLine = trim($data);
@@ -480,8 +494,8 @@ class EventLoopData
             return;
         }
 
-        if (Str::startsWith($data, '--' . $this->mail->getMimeBoundary()) && ! Str::endsWith($data, '--')) {
-            if (! empty(trim($this->currentLine))) {
+        if (Str::startsWith($data, '--'.$this->mail->getMimeBoundary()) && !Str::endsWith($data, '--')) {
+            if (!empty(trim($this->currentLine))) {
                 $this->mail->attachRaw($this->currentLine);
             }
             $this->currentLine = '';
@@ -491,7 +505,7 @@ class EventLoopData
             $this->endingMail = true;
         }
         if (trim($data) == "--{$this->mail->getMimeBoundary()}--") {
-            if (! empty(trim($this->currentLine))) {
+            if (!empty(trim($this->currentLine))) {
                 $this->mail->attachRaw($this->currentLine);
             }
             $this->endingMail = true;
@@ -525,7 +539,7 @@ class EventLoopData
 
                 return;
             }
-            if (! empty(trim($this->currentLine))) {
+            if (!empty(trim($this->currentLine))) {
                 $this->mail->attachRaw($this->currentLine);
             }
             $this->currentLine = '';
@@ -544,10 +558,10 @@ class EventLoopData
     protected function generateQueueId()
     {
         $queueId = sha1(
-            strtoupper(Str::random()) .
-            Carbon::now()->toString() .
-            $this->mail->getHelo() .
-            $this->mail->getSenderIp() .
+            strtoupper(Str::random()).
+            Carbon::now()->toString().
+            $this->mail->getHelo().
+            $this->mail->getSenderIp().
             $this->mail->getSender()
         );
 
@@ -578,6 +592,7 @@ class EventLoopData
      * and DropException throws and will act upon them as necessary.
      *
      * @param callable $handleMethod
+     *
      * @return void
      */
     private function handleWrapper(callable $handleMethod): void

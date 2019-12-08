@@ -10,16 +10,18 @@ trait CommunicateTrait
      * @var \React\Stream\WritableResourceStream
      */
     protected $connection;
-    
+
     /**
      * Write something on the connection.
      *
      * @param string $message
+     *
      * @return self
      */
     protected function say(string $message): self
     {
         $this->connection->write("$message\r\n");
+
         return $this;
     }
 
@@ -27,6 +29,7 @@ trait CommunicateTrait
      * Alias for `say`.
      *
      * @param string $message
+     *
      * @return self
      */
     protected function write(string $message): self
@@ -38,11 +41,13 @@ trait CommunicateTrait
      * Ends a connection and sends a message.
      *
      * @param string $message
+     *
      * @return self
      */
     protected function close(string $message): self
     {
         $this->connection->end("$message\r\n");
+
         return $this;
     }
 }

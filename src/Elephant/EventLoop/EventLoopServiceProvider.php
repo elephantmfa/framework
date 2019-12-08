@@ -2,15 +2,15 @@
 
 namespace Elephant\EventLoop;
 
-use RuntimeException;
-use React\Socket\Server;
-use React\EventLoop\Factory;
-use React\Socket\UnixServer;
-use React\Socket\ConnectionInterface;
+use Elephant\Contracts\EventLoop\ProcessManager;
 use Illuminate\Support\ServiceProvider;
+use React\EventLoop\Factory;
+use React\Socket\ConnectionInterface;
+use React\Socket\Server;
+use React\Socket\UnixServer;
 use React\Stream\ReadableResourceStream;
 use React\Stream\WritableResourceStream;
-use Elephant\Contracts\EventLoop\ProcessManager;
+use RuntimeException;
 
 class EventLoopServiceProvider extends ServiceProvider
 {
@@ -41,11 +41,10 @@ class EventLoopServiceProvider extends ServiceProvider
         $this->app->singleton('stdout', function ($app) {
             return new WritableResourceStream(STDOUT, $app->loop);
         });
-        
-        
+
         $this->app->bind('server', function ($app, $params) {
             $port = $params['port'];
-            if (! isset($port)) {
+            if (!isset($port)) {
                 throw new RuntimeException('No port provided to listen on.');
             }
             $server = new Server($port, $app->loop);
@@ -59,7 +58,7 @@ class EventLoopServiceProvider extends ServiceProvider
 
                         return;
                     }
-                    
+
                     $pid = $pm->createProcess();
                     $pm->markBusy($pid);
                     $process = $pm->getProcess($pid);
@@ -103,8 +102,8 @@ class EventLoopServiceProvider extends ServiceProvider
                 $connection->on('error', new EventLoopError($app, $connection));
 
                 $process->stdin->write(
-                    'CONNECT remote:' . $connection->getRemoteAddress() .
-                        ' local:' . $connection->getLocalAddress() . "\r\n"
+                    'CONNECT remote:'.$connection->getRemoteAddress().
+                        ' local:'.$connection->getLocalAddress()."\r\n"
                 );
             });
 

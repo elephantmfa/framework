@@ -2,6 +2,24 @@
 
 namespace Elephant\Foundation\Providers;
 
+use Elephant\Foundation\Console\Commands\ConsoleMakeCommand;
+use Elephant\Foundation\Console\Commands\EnvironmentCommand;
+use Elephant\Foundation\Console\Commands\EventGenerateCommand;
+use Elephant\Foundation\Console\Commands\EventListCommand;
+use Elephant\Foundation\Console\Commands\EventMakeCommand;
+use Elephant\Foundation\Console\Commands\ExceptionMakeCommand;
+use Elephant\Foundation\Console\Commands\FilterMakeCommand;
+use Elephant\Foundation\Console\Commands\JobMakeCommand;
+use Elephant\Foundation\Console\Commands\KeyGenerateCommand;
+use Elephant\Foundation\Console\Commands\ListenerMakeCommand;
+use Elephant\Foundation\Console\Commands\ModelMakeCommand;
+use Elephant\Foundation\Console\Commands\ObserverMakeCommand;
+use Elephant\Foundation\Console\Commands\PackageDiscoverCommand;
+use Elephant\Foundation\Console\Commands\ProviderMakeCommand;
+use Elephant\Foundation\Console\Commands\StopCommand;
+use Elephant\Foundation\Console\Commands\SubprocessStartCommand;
+use Elephant\Foundation\Console\Commands\TestMakeCommand;
+use Elephant\Foundation\Console\Commands\VendorPublishCommand;
 use Illuminate\Cache\Console\CacheTableCommand;
 use Illuminate\Cache\Console\ClearCommand as CacheClearCommand;
 use Illuminate\Cache\Console\ForgetCommand as CacheForgetCommand;
@@ -12,24 +30,6 @@ use Illuminate\Database\Console\Factories\FactoryMakeCommand;
 use Illuminate\Database\Console\Seeds\SeedCommand;
 use Illuminate\Database\Console\Seeds\SeederMakeCommand;
 use Illuminate\Database\Console\WipeCommand;
-use Elephant\Foundation\Console\Commands\ConsoleMakeCommand;
-use Elephant\Foundation\Console\Commands\EnvironmentCommand;
-use Elephant\Foundation\Console\Commands\EventGenerateCommand;
-use Elephant\Foundation\Console\Commands\EventListCommand;
-use Elephant\Foundation\Console\Commands\EventMakeCommand;
-use Elephant\Foundation\Console\Commands\ExceptionMakeCommand;
-use Elephant\Foundation\Console\Commands\JobMakeCommand;
-use Elephant\Foundation\Console\Commands\KeyGenerateCommand;
-use Elephant\Foundation\Console\Commands\ListenerMakeCommand;
-use Elephant\Foundation\Console\Commands\ModelMakeCommand;
-use Elephant\Foundation\Console\Commands\ObserverMakeCommand;
-use Elephant\Foundation\Console\Commands\PackageDiscoverCommand;
-use Elephant\Foundation\Console\Commands\ProviderMakeCommand;
-use Elephant\Foundation\Console\Commands\TestMakeCommand;
-use Elephant\Foundation\Console\Commands\VendorPublishCommand;
-use Elephant\Foundation\Console\Commands\StopCommand;
-use Elephant\Foundation\Console\Commands\SubprocessStartCommand;
-use Elephant\Foundation\Console\Commands\FilterMakeCommand;
 use Illuminate\Queue\Console\FailedTableCommand;
 use Illuminate\Queue\Console\FlushFailedCommand as FlushFailedQueueCommand;
 use Illuminate\Queue\Console\ForgetFailedCommand as ForgetFailedQueueCommand;
@@ -49,21 +49,21 @@ class ArtisanServiceProvider extends ServiceProvider implements DeferrableProvid
      * @var array
      */
     protected $commands = [
-        'DbWipe' => 'command.db.wipe',
-        'Environment' => 'command.environment',
-        'EventList' => 'command.event.list',
-        'KeyGenerate' => 'command.key.generate',
-        'QueueFailed' => 'command.queue.failed',
-        'QueueFlush' => 'command.queue.flush',
-        'QueueForget' => 'command.queue.forget',
-        'QueueListen' => 'command.queue.listen',
-        'QueueRestart' => 'command.queue.restart',
-        'QueueRetry' => 'command.queue.retry',
-        'QueueWork' => 'command.queue.work',
-        'Seed' => 'command.seed',
-        'ScheduleFinish' => ScheduleFinishCommand::class,
-        'ScheduleRun' => ScheduleRunCommand::class,
-        'Stop' => 'command.stop',
+        'DbWipe'          => 'command.db.wipe',
+        'Environment'     => 'command.environment',
+        'EventList'       => 'command.event.list',
+        'KeyGenerate'     => 'command.key.generate',
+        'QueueFailed'     => 'command.queue.failed',
+        'QueueFlush'      => 'command.queue.flush',
+        'QueueForget'     => 'command.queue.forget',
+        'QueueListen'     => 'command.queue.listen',
+        'QueueRestart'    => 'command.queue.restart',
+        'QueueRetry'      => 'command.queue.retry',
+        'QueueWork'       => 'command.queue.work',
+        'Seed'            => 'command.seed',
+        'ScheduleFinish'  => ScheduleFinishCommand::class,
+        'ScheduleRun'     => ScheduleRunCommand::class,
+        'Stop'            => 'command.stop',
         'SubprocessStart' => 'command.subprocess.start',
     ];
 
@@ -73,23 +73,23 @@ class ArtisanServiceProvider extends ServiceProvider implements DeferrableProvid
      * @var array
      */
     protected $devCommands = [
-        'CacheTable' => 'command.cache.table',
-        'ConsoleMake' => 'command.console.make',
-        'EventGenerate' => 'command.event.generate',
-        'EventMake' => 'command.event.make',
-        'ExceptionMake' => 'command.exception.make',
-        'FactoryMake' => 'command.factory.make',
-        'JobMake' => 'command.job.make',
-        'ListenerMake' => 'command.listener.make',
-        'ModelMake' => 'command.model.make',
-        'ObserverMake' => 'command.observer.make',
-        'ProviderMake' => 'command.provider.make',
+        'CacheTable'       => 'command.cache.table',
+        'ConsoleMake'      => 'command.console.make',
+        'EventGenerate'    => 'command.event.generate',
+        'EventMake'        => 'command.event.make',
+        'ExceptionMake'    => 'command.exception.make',
+        'FactoryMake'      => 'command.factory.make',
+        'JobMake'          => 'command.job.make',
+        'ListenerMake'     => 'command.listener.make',
+        'ModelMake'        => 'command.model.make',
+        'ObserverMake'     => 'command.observer.make',
+        'ProviderMake'     => 'command.provider.make',
         'QueueFailedTable' => 'command.queue.failed-table',
-        'QueueTable' => 'command.queue.table',
-        'SeederMake' => 'command.seeder.make',
-        'TestMake' => 'command.test.make',
-        'VendorPublish' => 'command.vendor.publish',
-        'FilterMake' => 'command.filter.make',
+        'QueueTable'       => 'command.queue.table',
+        'SeederMake'       => 'command.seeder.make',
+        'TestMake'         => 'command.test.make',
+        'VendorPublish'    => 'command.vendor.publish',
+        'FilterMake'       => 'command.filter.make',
     ];
 
     /**
@@ -105,7 +105,8 @@ class ArtisanServiceProvider extends ServiceProvider implements DeferrableProvid
     /**
      * Register the given commands.
      *
-     * @param  array  $commands
+     * @param array $commands
+     *
      * @return void
      */
     protected function registerCommands(array $commands)
@@ -173,7 +174,7 @@ class ArtisanServiceProvider extends ServiceProvider implements DeferrableProvid
     protected function registerDbWipeCommand()
     {
         $this->app->singleton('command.db.wipe', function () {
-            return new WipeCommand;
+            return new WipeCommand();
         });
     }
 
@@ -185,7 +186,7 @@ class ArtisanServiceProvider extends ServiceProvider implements DeferrableProvid
     protected function registerEventGenerateCommand()
     {
         $this->app->singleton('command.event.generate', function () {
-            return new EventGenerateCommand;
+            return new EventGenerateCommand();
         });
     }
 
@@ -233,7 +234,7 @@ class ArtisanServiceProvider extends ServiceProvider implements DeferrableProvid
     protected function registerEnvironmentCommand()
     {
         $this->app->singleton('command.environment', function () {
-            return new EnvironmentCommand;
+            return new EnvironmentCommand();
         });
     }
 
@@ -269,7 +270,7 @@ class ArtisanServiceProvider extends ServiceProvider implements DeferrableProvid
     protected function registerKeyGenerateCommand()
     {
         $this->app->singleton('command.key.generate', function () {
-            return new KeyGenerateCommand;
+            return new KeyGenerateCommand();
         });
     }
 
@@ -317,7 +318,7 @@ class ArtisanServiceProvider extends ServiceProvider implements DeferrableProvid
     protected function registerPackageDiscoverCommand()
     {
         $this->app->singleton('command.package.discover', function () {
-            return new PackageDiscoverCommand;
+            return new PackageDiscoverCommand();
         });
     }
 
@@ -353,7 +354,7 @@ class ArtisanServiceProvider extends ServiceProvider implements DeferrableProvid
     protected function registerQueueFailedCommand()
     {
         $this->app->singleton('command.queue.failed', function () {
-            return new ListFailedQueueCommand;
+            return new ListFailedQueueCommand();
         });
     }
 
@@ -365,7 +366,7 @@ class ArtisanServiceProvider extends ServiceProvider implements DeferrableProvid
     protected function registerQueueForgetCommand()
     {
         $this->app->singleton('command.queue.forget', function () {
-            return new ForgetFailedQueueCommand;
+            return new ForgetFailedQueueCommand();
         });
     }
 
@@ -377,7 +378,7 @@ class ArtisanServiceProvider extends ServiceProvider implements DeferrableProvid
     protected function registerQueueFlushCommand()
     {
         $this->app->singleton('command.queue.flush', function () {
-            return new FlushFailedQueueCommand;
+            return new FlushFailedQueueCommand();
         });
     }
 
@@ -413,7 +414,7 @@ class ArtisanServiceProvider extends ServiceProvider implements DeferrableProvid
     protected function registerQueueRetryCommand()
     {
         $this->app->singleton('command.queue.retry', function () {
-            return new QueueRetryCommand;
+            return new QueueRetryCommand();
         });
     }
 

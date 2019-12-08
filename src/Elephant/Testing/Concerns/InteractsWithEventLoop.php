@@ -3,7 +3,6 @@
 namespace Elephant\Testing\Concerns;
 
 use Clue\React\Block;
-use Illuminate\Support\Str;
 
 trait InteractsWithEventLoop
 {
@@ -19,7 +18,7 @@ trait InteractsWithEventLoop
     protected function setUpEventLoop()
     {
         $this->server = $this->app->make('server', [
-            'port' => 0,
+            'port'    => 0,
             'filters' => [],
         ]);
         $this->connect();
@@ -29,12 +28,13 @@ trait InteractsWithEventLoop
     {
         $this->client = stream_socket_client($this->server->getAddress());
         $this->tick()->lastResponse = trim(fread($this->client, 4096), "\r\n");
+
         return $this;
     }
 
     /**
      * Tears down the event loop, so as to preventany stray services running
-     * or memory leaks
+     * or memory leaks.
      *
      * @return void
      */
@@ -54,43 +54,49 @@ trait InteractsWithEventLoop
             dump($parts);
             $this->lastResponse = $parts[count($parts) - 1];
         }
-        
+
         return $this;
     }
 
     public function assertResponse($response)
     {
         $this->assertEquals($this->lastResponse, $response);
+
         return $this;
     }
 
     public function assert2xxResponse()
     {
         $this->assertTrue(preg_match('/^2\d\d/', $this->lastResponse) != false);
+
         return $this;
     }
 
     public function assert3xxResponse()
     {
         $this->assertTrue(preg_match('/^3\d\d/', $this->lastResponse) != false);
+
         return $this;
     }
 
     public function assert4xxResponse()
     {
         $this->assertTrue(preg_match('/^4\d\d/', $this->lastResponse) != false);
+
         return $this;
     }
 
     public function assert5xxResponse()
     {
         $this->assertTrue(preg_match('/^5\d\d/', $this->lastResponse) != false);
+
         return $this;
     }
 
     protected function tick()
     {
         Block\sleep(1, $this->app->loop);
+
         return $this;
     }
 }

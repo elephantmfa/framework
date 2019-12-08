@@ -5,7 +5,6 @@ namespace Elephant\Testing;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Elephant\Testing\Concerns\InteractsWithEventLoop;
-use Illuminate\Console\Application as Artisan;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Facade;
 use Illuminate\Support\Str;
@@ -203,7 +202,8 @@ abstract class TestCase extends BaseTestCase
     /**
      * Register a callback to be run after the application is created.
      *
-     * @param  callable  $callback
+     * @param callable $callback
+     *
      * @return void
      */
     public function afterApplicationCreated(callable $callback)
@@ -218,7 +218,8 @@ abstract class TestCase extends BaseTestCase
     /**
      * Register a callback to be run before the application is destroyed.
      *
-     * @param  callable  $callback
+     * @param callable $callback
+     *
      * @return void
      */
     protected function beforeApplicationDestroyed(callable $callback)

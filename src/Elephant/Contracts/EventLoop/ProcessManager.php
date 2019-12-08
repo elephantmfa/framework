@@ -16,7 +16,7 @@ interface ProcessManager
     /**
      * Get the count of all processes.
      *
-     * @return integer
+     * @return int
      */
     public function getProcessCount(): int;
 
@@ -30,7 +30,7 @@ interface ProcessManager
     /**
      * Get the count of the waiting processes.
      *
-     * @return integer
+     * @return int
      */
     public function getWaitingCount(): int;
 
@@ -52,6 +52,7 @@ interface ProcessManager
      * Mark a process as waiting.
      *
      * @param string $pid
+     *
      * @return void
      */
     public function markWaiting(string $pid): void;
@@ -60,6 +61,7 @@ interface ProcessManager
      * Mark a process as busy.
      *
      * @param string $pid
+     *
      * @return void
      */
     public function markBusy(string $pid): void;
@@ -68,6 +70,7 @@ interface ProcessManager
      * Get a specific process from ID.
      *
      * @param string $pid The process ID to get the process of.
+     *
      * @return Process
      */
     public function getProcess(string $pid): Process;
@@ -83,6 +86,7 @@ interface ProcessManager
      * Kill an existing process.
      *
      * @param string $pid the id of the process to kill.
+     *
      * @return bool
      */
     public function killProcess(string $pid): bool;

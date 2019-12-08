@@ -9,14 +9,14 @@ interface Scanner
      *
      * @return Scanner|null
      */
-    public function scan(): ?Scanner;
+    public function scan(): ?self;
 
     /**
      * Set the user to use when scanning the mail.
      *
      * @return Scanner
      */
-    public function setUser(string $email): Scanner;
+    public function setUser(string $email): self;
 
     /**
      * Get the results of the scan.

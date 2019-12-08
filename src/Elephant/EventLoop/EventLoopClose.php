@@ -3,13 +3,13 @@
 namespace Elephant\EventLoop;
 
 use Elephant\EventLoop\Traits\CommunicateTrait;
-use React\Socket\ConnectionInterface;
 use Illuminate\Contracts\Container\Container;
+use React\Socket\ConnectionInterface;
 
 class EventLoopClose
 {
     use CommunicateTrait;
-    
+
     protected $app;
 
     public function __construct(Container $app, ConnectionInterface $connection)

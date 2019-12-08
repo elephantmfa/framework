@@ -11,71 +11,79 @@ interface Mail
      *
      * @param string $header
      * @param string $value
+     *
      * @return \Elephant\Contracts\Mail\Mail
      */
-    public function appendHeader(string $header, string $value): Mail;
-    
+    public function appendHeader(string $header, string $value): self;
+
     /**
-     * Add a header at the bottom of the headers of the mail message;
+     * Add a header at the bottom of the headers of the mail message;.
      *
      * @param string $header
      * @param string $value
+     *
      * @return \Elephant\Contracts\Mail\Mail
      */
-    public function prependHeader(string $header, string $value): Mail;
+    public function prependHeader(string $header, string $value): self;
 
     /**
      * Change a header according to the  alteration callable.
      *
-     * @param string $header
+     * @param string   $header
      * @param callable $alteration
-     * @param int $which Which header to add in the event of multiple of the same header.
-     *  If unset, alter the latest instance of the header.
+     * @param int      $which      Which header to add in the event of multiple of the same header.
+     *                             If unset, alter the latest instance of the header.
+     *
      * @return \Elephant\Contracts\Mail\Mail
      */
-    public function alterHeader(string $header, callable $alteration, ?int $which = null): Mail;
+    public function alterHeader(string $header, callable $alteration, ?int $which = null): self;
 
     /**
      * Delete a header.
      *
      * @param string $header
-     * @param integer $which Which header to add in the event of multiple of the same header.
-     *  If unset, alter the latest instance of the header.
+     * @param int    $which  Which header to add in the event of multiple of the same header.
+     *                       If unset, alter the latest instance of the header.
+     *
      * @return \Elephant\Contracts\Mail\Mail
      */
-    public function deleteHeader(string $header, ?int $which = null): Mail;
+    public function deleteHeader(string $header, ?int $which = null): self;
 
     /**
      * Attach a body section or attachment.
      *
      * @param \Elephant\Mail\BodyPart $body
+     *
      * @return \Elephant\Contracts\Mail\Mail
      */
-    public function attach(BodyPart $body): Mail;
+    public function attach(BodyPart $body): self;
 
     /**
      * Attach a body section or attachment.
      *
      * @param string $body
+     *
      * @return \Elephant\Contracts\Mail\Mail
      */
-    public function attachRaw(string $body): Mail;
-    
+    public function attachRaw(string $body): self;
+
     /**
      * Add an email address to BCC. This will not appear in the headers.
      *
      * @param string $recipient
+     *
      * @return \Elephant\Contracts\Mail\Mail
      */
-    public function bcc(string $recipient): Mail;
-    
+    public function bcc(string $recipient): self;
+
     /**
      * Add an email address to CC. This will appear in the headers.
      *
      * @param string $recipient
+     *
      * @return \Elephant\Contracts\Mail\Mail
      */
-    public function cc(string $recipient): Mail;
+    public function cc(string $recipient): self;
 
     /**
      * Set the final destination of the mail message.
@@ -85,90 +93,101 @@ interface Mail
      *     * reject
      *     * defer
      *     * quarantine
-     *     * drop
+     *     * drop.
      *
      * @param string $destination
+     *
      * @return \Elephant\Contracts\Mail\Mail
      */
     public function setFinalDestination(string $destination):self;
-
 
     /**
      * Add a header to the headers array.
      *
      * @param string $header
      * @param string $value
+     *
      * @return \Elephant\Contracts\Mail\Mail
      */
-    public function addHeader(string $header, string $value): Mail;
+    public function addHeader(string $header, string $value): self;
 
     /**
      * Set a HELO message.
      *
      * @param string $helo
+     *
      * @return \Elephant\Contracts\Mail\Mail
      */
-    public function setHelo(string $helo): Mail;
+    public function setHelo(string $helo): self;
 
     /**
      * Set the sender IP of the message.
      *
      * @param string $ip
+     *
      * @return \Elephant\Contracts\Mail\Mail
      */
-    public function setSenderIp(string $ip): Mail;
+    public function setSenderIp(string $ip): self;
 
     /**
      * Set the sender name (PTR record of the IP) of the message.
      *
      * @param string $name
+     *
      * @return \Elephant\Contracts\Mail\Mail
      */
-    public function setSenderName(string $name): Mail;
-    
+    public function setSenderName(string $name): self;
+
     /**
      * Set the protocol for the message. Will be either SMTP or ESMTP.
      *
      * @param string $protocol
+     *
      * @return \Elephant\Contracts\Mail\Mail
      */
-    public function setProtocol(string $protocol): Mail;
+    public function setProtocol(string $protocol): self;
 
     /**
      * Add a recipient to the recipient array.
      *
      * @param string $recipient
+     *
      * @return \Elephant\Contracts\Mail\Mail
      */
-    public function addRecipient(string $recipient): Mail;
+    public function addRecipient(string $recipient): self;
 
     /**
      * Set the sender of the message.
      *
      * @param string $sender
+     *
      * @return \Elephant\Contracts\Mail\Mail
      */
-    public function setSender(string $sender): Mail;
+    public function setSender(string $sender): self;
+
     /**
      * Set the queue ID of the message.
      *
      * @param string $queueId
+     *
      * @return \Elephant\Contracts\Mail\Mail
      */
-    public function setQueueId(string $queueId): Mail;
+    public function setQueueId(string $queueId): self;
 
     /**
-     * Set the MIME boundary
+     * Set the MIME boundary.
      *
      * @param string $boundary
+     *
      * @return \Elephant\Contracts\Mail\Mail
      */
-    public function setMimeBoundary(string $boundary): Mail;
+    public function setMimeBoundary(string $boundary): self;
 
     /**
-     * Get a header from the headers array
+     * Get a header from the headers array.
      *
      * @param string|null $header
+     *
      * @return array
      */
     public function getHeader(?string $header = null): array;
@@ -212,7 +231,8 @@ interface Mail
      * Get the index of the newest instance of a header.
      *
      * @param string $header
-     * @return integer
+     *
+     * @return int
      */
     public function getNewestHeaderIndex(string $header): int;
 
@@ -222,7 +242,7 @@ interface Mail
      * @return string|null
      */
     public function getSender(): ?string;
-    
+
     /**
      * Get the queue ID of the message.
      *
@@ -237,14 +257,14 @@ interface Mail
      */
     public function getMimeBoundary(): ?string;
 
-
     /**
      * Append to the end of the raw data.
      *
      * @param string $rawData
+     *
      * @return \Elephant\Contracts\Mail\Mail
      */
-    public function appendToRaw(string $rawData): Mail;
+    public function appendToRaw(string $rawData): self;
 
     /**
      * Get the raw data of the mail.

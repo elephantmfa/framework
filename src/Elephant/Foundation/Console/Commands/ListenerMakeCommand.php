@@ -32,14 +32,15 @@ class ListenerMakeCommand extends GeneratorCommand
     /**
      * Build the class with the given name.
      *
-     * @param  string  $name
+     * @param string $name
+     *
      * @return string
      */
     protected function buildClass($name)
     {
         $event = $this->option('event');
 
-        if (! Str::startsWith($event, [
+        if (!Str::startsWith($event, [
             $this->laravel->getNamespace(),
             'Illuminate',
             '\\',
@@ -73,7 +74,8 @@ class ListenerMakeCommand extends GeneratorCommand
     /**
      * Determine if the class already exists.
      *
-     * @param  string  $rawName
+     * @param string $rawName
+     *
      * @return bool
      */
     protected function alreadyExists($rawName)
@@ -84,7 +86,8 @@ class ListenerMakeCommand extends GeneratorCommand
     /**
      * Get the default namespace for the class.
      *
-     * @param  string  $rootNamespace
+     * @param string $rootNamespace
+     *
      * @return string
      */
     protected function getDefaultNamespace($rootNamespace)
