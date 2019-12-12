@@ -37,10 +37,34 @@ class Transport
             app('filesystem')->put("quarantine/{$this->mail->getQueueId()}.eml", $this->mail->getRaw());
         } elseif (preg_match('/^.+@\w+\..+$/', $finalDestiny)) {
             // Final Destiny is an email address
+            $this->mail->removeAllRecipients()
+                ->addRecipient($finalDestiny);
+
+            [$ip, $port] = explode(':', config('relay.default_relay'));
+            $ip = trim($ip, '[]');
+            $this->sendTo($ip, $port);
         } elseif (preg_match($relayRegex, $finalDestiny, $matches)) {
             // Final destiny is a destination ip:port
+            /**
+             * @var string $ip
+             * @var int $port
+             */
             [, $ip, $port] = $matches;
             $ip = trim($ip, '[]');
+            $this->sendTo($ip, $port);
+        } else {
+            /**
+             * @var string $ip
+             * @var int $port
+             */
+            [$ip, $port] = explode(':', config('relay.default_relay'));
+            $ip = trim($ip, '[]');
+            $this->sendTo($ip, $port);
         }
+    }
+
+    private function sendTo(string $ip, int $port): void
+    {
+        //
     }
 }
