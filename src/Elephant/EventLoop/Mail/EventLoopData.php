@@ -574,14 +574,7 @@ class EventLoopData
 
         // If queueing is enabled, we need to store the mail in the queue for
         //   later processing.
-        $this->app->filesystem->disk('tmp')->put("queue/{$queueId}/email.eml", $this->mail->getRaw());
-        foreach ($this->mail->bodyParts as $i => $bodyPart) {
-            $name = "p{$i}";
-            if (isset($bodyPart->filename)) {
-                $name = $bodyPart->filename;
-            }
-            $this->app->filesystem->disk('tmp')->put("queue/{$queueId}/{$name}", $bodyPart->getBody());
-        }
+        $this->app->filesystem->disk('tmp')->put("queue/{$queueId}", $this->mail->getRaw());
 
         return $queueId;
     }
