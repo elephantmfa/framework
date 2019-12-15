@@ -4,8 +4,9 @@ namespace Elephant\Filtering\Scanners;
 
 use Elephant\Contracts\Mail\Mail;
 use Elephant\Filtering\Scanners\Scanner;
+use Elephant\Contracts\Mail\Scanner as ScannerContract;
 
-class SpamAssassin implements Scanner
+class SpamAssassin extends Scanner
 {
     /**
      * Length of the content to send to SpamAssassin in bytes.
@@ -27,10 +28,17 @@ class SpamAssassin implements Scanner
         if ($maxSize > 0 && $this->contentLength > $maxSize) {
             $this->contentLength = $maxSize;
         }
+        $this->results = [
+            'total_score' => 0,
+            'tests' => [],
+            'autolearn' => false,
+            'autolearn_force' => false,
+            'version' => 'v0.0.0',
+        ];
     }
 
     /** {@inheritdoc} */
-    public function scan(): ?Scanner
+    public function scan(): ?ScannerContract
     {
         $timeBegin = microtime(true);
 
@@ -56,29 +64,34 @@ class SpamAssassin implements Scanner
         );
         if (! @socket_connect($socket, $path, $port)) {
             $this->error = 'Unable to connect to socket!';
+            $this->error .= ' ' . socket_strerror(socket_last_error($socket));
 
             return null;
         }
 
         if (! $this->socketWrite($socket, 'HEADERS SPAMC/1.2')) {
             $this->error = 'Unable to write command to socket!';
+            $this->error .= ' ' . socket_strerror(socket_last_error($socket));
 
             return null;
         }
         if (! $this->socketWrite($socket, "Content-length: {$this->contentLength}")) {
             $this->error = 'Unable to write content-length to socket!';
+            $this->error .= ' ' . socket_strerror(socket_last_error($socket));
 
             return null;
         }
         if (isset($this->user) && ! empty($this->user)) {
             if (!$this->socketWrite($socket, "User: {$this->user}")) {
                 $this->error = 'Unable to write user to socket!';
+                $this->error .= ' ' . socket_strerror(socket_last_error($socket));
 
                 return null;
             }
         }
         if (! $this->socketWrite($socket, '')) {
             $this->error = 'Unable to write to socket!';
+            $this->error .= ' ' . socket_strerror(socket_last_error($socket));
 
             return null;
         }
@@ -89,6 +102,7 @@ class SpamAssassin implements Scanner
             $bytes += strlen("$line\r\n");
             if (! $this->socketWrite($socket, $line)) {
                 $this->error = 'Unable to write to socket!';
+                $this->error .= ' ' . socket_strerror(socket_last_error($socket));
 
                 return null;
             }
@@ -105,7 +119,7 @@ class SpamAssassin implements Scanner
                 continue;
             }
             $line = trim($line);
-            if (preg_match('/^Spam:\s+(?:False|True)\s+;\s+(\d+)\s+/\s+\d+/i', $line, $matches)) {
+            if (preg_match('/^Spam:\s+(?:False|True)\s+;\s+(\d+)\s+\/\s+\d+/i', $line, $matches)) {
                 $this->results['total_score'] = $matches[1];
 
                 continue;
