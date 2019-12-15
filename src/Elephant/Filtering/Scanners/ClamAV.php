@@ -46,12 +46,12 @@ class ClamAV implements Scanner
 
         $this->socketWrite($socket, "MULTISCAN {$path}");
 
-        $foundRegex = '/: (?!Infected Archive)(.*) FOUND/';
+        $foundRegex = '/^(.*): (?!Infected Archive)(.*) FOUND/';
         while ($line = @socket_read($socket, 512, PHP_NORMAL_READ)) {
             if (preg_match($foundRegex, $line, $matches)) {
-                [,$name] = $matches;
-
-                $this->results['viruses'][] = $name;
+                [,$fname, $vname] = $matches;
+                
+                $this->results['viruses'][basename($fname)] = $vname;
                 $this->results['infected'] = true;
             }
         }
