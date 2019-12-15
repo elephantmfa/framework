@@ -1,8 +1,8 @@
 <?php
 
-namespace Elephant\Filtering;
+namespace Elephant\Filtering\Scanners;
 
-use Elephant\Filtering\Scanner;
+use Elephant\Filtering\Scanners\Scanner;
 use Elephant\Contracts\Mail\Mail;
 
 class ClamAV implements Scanner

@@ -1,9 +1,9 @@
 <?php
 
-namespace Elephant\Filtering;
+namespace Elephant\Filtering\Scanners;
 
 use Elephant\Contracts\Mail\Mail;
-use Elephant\Contracts\Mail\Scanner;
+use Elephant\Filtering\Scanners\Scanner;
 
 class SpamAssassin implements Scanner
 {

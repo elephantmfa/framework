@@ -1,6 +1,6 @@
 <?php
 
-namespace Elephant\Filtering;
+namespace Elephant\Filtering\Scanners;
 
 use Elephant\Contracts\Mail\Mail;
 use Elephant\Contracts\Mail\Scanner as ScannerContract;
