@@ -127,34 +127,58 @@ class ClamAV extends Scanner
      */
     private function instream(): bool
     {
-        foreach ($this->mail->getBodyParts() as $i => $bodyPart) {
-            if (! isset($this->socket) || ! is_resource($this->socket)) {
-                if (! $this->connect()) {
-                    return false;
-                }
+        $sendEmail = config('scanners.clamav.send_email.enabled', false);
+        if ($sendEmail) {
+            $maxEmailSize = config('scanners.clamav.send_email.max_size', 128 * 1000); // 128 Kb
+            $emailContents = $this->mail->getRaw();
+            if ($maxEmailSize != 0) {
+                $emailContents = substr($emailContents, 0, $maxEmailSize);
             }
-
-            if (! $this->sendCommand("INSTREAM")) {
-                $this->error = 'Unable to write to socket!';
-                $this->error .= ' ' . socket_strerror(socket_last_error($this->socket));
-
+            if (! $this->instreamSend($emailContents, 'email.eml')) {
                 return false;
             }
-            $left = $bodyPart->getBody();
-            while (strlen($left) > 0) {
-                $chunk = substr($left, 0, self::BYTES_WRITE);
-                $left = substr($left, self::BYTES_WRITE);
-                $this->sendChunk($chunk);
+        }
+        $maxSize = config('scanners.clamav.max_size', 64 * 1000); // 64 Kb
+
+        foreach ($this->mail->getBodyParts() as $i => $bodyPart) {
+            if ($bodyPart->size > $maxSize) {
+                continue;
             }
-
-            $this->endStream();
-
-            if (! $this->read($bodyPart->filename ?? "part{$i}")) {
+            
+            if (! $this->instreamSend($bodyPart->getBody(), $bodyPart->filename ?? "part{$i}")) {
                 return false;
             }
         }
 
         return true;
+    }
+
+    private function instreamSend(string $body, string $filename)
+    {
+        if (! isset($this->socket) || ! is_resource($this->socket)) {
+            if (! $this->connect()) {
+                return false;
+            }
+        }
+
+        if (! $this->sendCommand("INSTREAM")) {
+            $this->error = 'Unable to write to socket!';
+            $this->error .= ' ' . socket_strerror(socket_last_error($this->socket));
+
+            return false;
+        }
+        $left = $body;
+        while (strlen($left) > 0) {
+            $chunk = substr($left, 0, self::BYTES_WRITE);
+            $left = substr($left, self::BYTES_WRITE);
+            $this->sendChunk($chunk);
+        }
+
+        $this->endStream();
+
+        if (! $this->read($filename)) {
+            return false;
+        }
     }
 
     /**
