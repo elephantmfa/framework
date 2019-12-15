@@ -8,39 +8,11 @@ use Elephant\Contracts\Mail\Scanner;
 class SpamAssassin implements Scanner
 {
     /**
-     * The mail message to be scanning.
-     *
-     * @var Elephant\Contracts\Mail\Mail
-     */
-    protected $mail;
-
-    /**
-     * The user email to use when scanning.
-     *
-     * @var string
-     */
-    protected $user;
-
-    /**
-     * The spam tests that were returned by SpamAssassin.
-     *
-     * @var array
-     */
-    protected $results;
-
-    /**
      * Length of the content to send to SpamAssassin in bytes.
      *
-     * @var int
+     * @var int $contentLength
      */
     protected $contentLength;
-
-    /**
-     * Error reported during processing.
-     *
-     * @var string
-     */
-    public $error;
 
     /**
      * Construct a new SpamAssassin Scanner instance.
@@ -49,63 +21,29 @@ class SpamAssassin implements Scanner
      */
     public function __construct(Mail $mail)
     {
-        $this->mail = $mail;
+        parent::__construct($mail);
         $this->contentLength = strlen(str_replace("\n", "\r\n", $mail->getRaw()));
         $maxSize = config('scanners.spamassassin.max_size', 0);
         if ($maxSize > 0 && $this->contentLength > $maxSize) {
             $this->contentLength = $maxSize;
         }
-        $this->results = [];
-        $this->error = '';
-        $this->user = '';
-    }
-
-    /** {@inheritdoc} */
-    public function setUser(string $email): Scanner
-    {
-        return $this;
     }
 
     /** {@inheritdoc} */
     public function scan(): ?Scanner
     {
         $timeBegin = microtime(true);
-        [$type, $path] = explode('://', config('scanners.spamassassin.socket'), 2);
-        if (!isset($path) || empty($path) || !isset($type) || empty($type)) {
-            $this->error = "Invalid socket: {$type}{$path}.";
 
-            return null;
-        }
+        [$path, $port, $proto, $type] = $this->breakDsn(config('scanners.spamassassin.socket'));
 
-        $type = strtolower($type);
-        if ($type === 'ipv4') {
-            $type = AF_INET;
-        } elseif ($type === 'ipv6') {
-            $type = AF_INET6;
-        } elseif ($type === 'unix') {
-            $type = AF_UNIX;
-        } else {
-            $type = null;
-        }
         if (is_null($type)) {
             $this->error = "Invalid socket type: $type";
 
             return null;
         }
 
-        $proto = SOL_TCP;
-        if ($type == AF_INET6) {
-            [$path, $port] = explode(']:', $path, 2);
-            $path = trim($path, '[]');
-        } elseif ($type == AF_INET) {
-            [$path, $port] = explode(':', $path, 2);
-        } else {
-            $port = 0;
-            $proto = 0;
-        }
-
         $socket = socket_create($type, SOCK_STREAM, $proto);
-        if (!$socket) {
+        if (! $socket) {
             $this->error = 'Unable to create socket!';
 
             return null;
@@ -116,30 +54,30 @@ class SpamAssassin implements Scanner
             SO_SNDTIMEO,
             ['sec' => config('scanners.spamassassin.timeout', 10), 'usec' => 0]
         );
-        if (!@socket_connect($socket, $path, $port)) {
+        if (! @socket_connect($socket, $path, $port)) {
             $this->error = 'Unable to connect to socket!';
 
             return null;
         }
 
-        if (!$this->socketWrite($socket, 'HEADERS SPAMC/1.2')) {
+        if (! $this->socketWrite($socket, 'HEADERS SPAMC/1.2')) {
             $this->error = 'Unable to write command to socket!';
 
             return null;
         }
-        if (!$this->socketWrite($socket, "Content-length: {$this->contentLength}")) {
+        if (! $this->socketWrite($socket, "Content-length: {$this->contentLength}")) {
             $this->error = 'Unable to write content-length to socket!';
 
             return null;
         }
-        if (isset($this->user) && !empty($this->user)) {
+        if (isset($this->user) && ! empty($this->user)) {
             if (!$this->socketWrite($socket, "User: {$this->user}")) {
                 $this->error = 'Unable to write user to socket!';
 
                 return null;
             }
         }
-        if (!$this->socketWrite($socket, '')) {
+        if (! $this->socketWrite($socket, '')) {
             $this->error = 'Unable to write to socket!';
 
             return null;
@@ -149,7 +87,7 @@ class SpamAssassin implements Scanner
         $bytes = 0;
         foreach ($lines as $line) {
             $bytes += strlen("$line\r\n");
-            if (!$this->socketWrite($socket, $line)) {
+            if (! $this->socketWrite($socket, $line)) {
                 $this->error = 'Unable to write to socket!';
 
                 return null;
@@ -162,7 +100,7 @@ class SpamAssassin implements Scanner
         $currentLine = '';
         while ($line = @socket_read($socket, 512, PHP_NORMAL_READ)) {
             if (preg_match('/^\s+[a-z]+/i', $line)) {
-                $currentLine .= ' '.trim($line);
+                $currentLine .= ' ' . trim($line);
 
                 continue;
             }
@@ -173,9 +111,9 @@ class SpamAssassin implements Scanner
                 continue;
             }
             if (preg_match('/^[a-z\-]+: /i', $line)) {
-                $regex = '/^X-Spam-Status: '.
-                    '(?:(?:Yes|No), score=[0-9\.\-]+ required=[0-9\.\-]+ )?'.
-                    'tests=(.*) autolearn=(yes|no)(?: autolearn_force=(yes|no))?'.
+                $regex = '/^X-Spam-Status: ' .
+                    '(?:(?:Yes|No), score=[0-9\.\-]+ required=[0-9\.\-]+ )?' .
+                    'tests=(.*) autolearn=(yes|no)(?: autolearn_force=(yes|no))?' .
                     ' version=([0-9\.]+)$/';
                 if (preg_match($regex, $currentLine, $matches)) {
                     [, $tests, $autolearn, $autolearn_force, $version] = $matches;
@@ -204,12 +142,6 @@ class SpamAssassin implements Scanner
         $this->mail->timings['spamassassin'] = microtime(true) - $timeBegin;
 
         return $this;
-    }
-
-    /** {@inheritdoc} */
-    public function getResults()
-    {
-        return $this->results;
     }
 
     /**
