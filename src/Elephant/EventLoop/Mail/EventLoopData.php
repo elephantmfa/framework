@@ -2,14 +2,17 @@
 
 namespace Elephant\EventLoop\Mail;
 
+use Illuminate\Support\Str;
 use Elepahnt\Mail\Transport;
 use Elephant\Contracts\Mail\Mail;
-use Elephant\EventLoop\Traits\CommunicateTrait;
+use Illuminate\Pipeline\Pipeline;
 use Elephant\Mail\Jobs\QueueProcessJob;
 use Illuminate\Contracts\Container\Container;
-use Illuminate\Pipeline\Pipeline;
-use Illuminate\Support\Carbon;
-use Illuminate\Support\Str;
+use Elephant\EventLoop\Traits\CommunicateTrait;
+use Elephant\Filtering\Exception\DropException;
+use Elephant\Filtering\Exception\RejectException;
+use Elephant\Filtering\Exception\DeferException;
+use Elephant\Filtering\Exception\QuarantineException;
 
 class EventLoopData
 {
@@ -560,15 +563,7 @@ class EventLoopData
      */
     protected function generateQueueId()
     {
-        $queueId = sha1(
-            strtoupper(Str::random()).
-            Carbon::now()->toString().
-            $this->mail->getHelo().
-            $this->mail->getSenderIp().
-            $this->mail->getSender()
-        );
-
-        $this->mail->setQueueId($queueId);
+        $queueId = $this->mail->getQueueId();
 
         // First, let's check if queuing is disabled, and handle that upfront.
         if ($this->app->config['relay.queue_processor'] == 'none') {
