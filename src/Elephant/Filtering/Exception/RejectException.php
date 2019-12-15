@@ -4,7 +4,7 @@ namespace Elephant\Filtering\Exception;
 
 use Exception;
 
-class RejectEception extends Exception
+class RejectException extends Exception
 {
     /**
      * Create a new QuarantineException.
