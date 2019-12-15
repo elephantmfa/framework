@@ -3,7 +3,7 @@
 use Illuminate\Container\Container;
 use Illuminate\Support\Carbon;
 
-if (!function_exists('app')) {
+if (! function_exists('app')) {
     /**
      * Get the available container instance.
      *
@@ -22,7 +22,7 @@ if (!function_exists('app')) {
     }
 }
 
-if (!function_exists('config')) {
+if (! function_exists('config')) {
     /**
      * Get / set the specified configuration value.
      *
@@ -47,7 +47,7 @@ if (!function_exists('config')) {
     }
 }
 
-if (!function_exists('info')) {
+if (! function_exists('info')) {
     /**
      * Logs out the $logMessage on INFO.
      *
@@ -58,7 +58,7 @@ if (!function_exists('info')) {
     function info(?string $logMessage)
     {
         $pid = config('app.process_id') ?? '';
-        if (!empty($pid)) {
+        if (! empty($pid)) {
             $pid = "[$pid] ";
         }
         app('log')->info("$pid$logMessage");
@@ -68,7 +68,7 @@ if (!function_exists('info')) {
     }
 }
 
-if (!function_exists('error')) {
+if (! function_exists('error')) {
     /**
      * Logs out the $logMessage on ERROR.
      *
@@ -79,8 +79,8 @@ if (!function_exists('error')) {
     function error(?string $logMessage)
     {
         $pid = config('app.process_id') ?? '';
-        if (!empty($pid)) {
-            $pid = "[$pid]";
+        if (! empty($pid)) {
+            $pid = "[$pid] ";
         }
         app('log')->error("$pid$logMessage");
         if (config('app.debug') && empty($pid)) {
@@ -89,7 +89,32 @@ if (!function_exists('error')) {
     }
 }
 
-if (!function_exists('dd')) {
+if (! function_exists('debug')) {
+    /**
+     * Logs out the $logMessage on DEBUG.
+     *
+     * @param string $logMessage
+     *
+     * @return void
+     */
+    function debug(?string $logMessage)
+    {
+        if (! config('app.debug')) {
+            return;
+        }
+        
+        $pid = config('app.process_id') ?? '';
+        if (! empty($pid)) {
+            $pid = "[$pid] ";
+        }
+        app('log')->debug("$pid$logMessage");
+        if (empty($pid)) {
+            echo '['.Carbon::now()."]D $pid$logMessage\n";
+        }
+    }
+}
+
+if (! function_exists('dd')) {
     /**
      * Die and var_export the data.
      *
@@ -103,7 +128,7 @@ if (!function_exists('dd')) {
     }
 }
 
-if (!function_exists('base_path')) {
+if (! function_exists('base_path')) {
     /**
      * Get the path to the storage folder.
      *
@@ -117,7 +142,7 @@ if (!function_exists('base_path')) {
     }
 }
 
-if (!function_exists('storage_path')) {
+if (! function_exists('storage_path')) {
     /**
      * Get the path to the storage folder.
      *
@@ -131,7 +156,7 @@ if (!function_exists('storage_path')) {
     }
 }
 
-if (!function_exists('database_path')) {
+if (! function_exists('database_path')) {
     /**
      * Get the database path.
      *
@@ -145,7 +170,7 @@ if (!function_exists('database_path')) {
     }
 }
 
-if (!function_exists('validate_ip')) {
+if (! function_exists('validate_ip')) {
     /**
      * Verify that an IP or IP:port are valid.
      *
@@ -185,7 +210,7 @@ if (!function_exists('validate_ip')) {
     }
 }
 
-if (!function_exists('fold_header')) {
+if (! function_exists('fold_header')) {
     /**
      * Folds a header value to be no more than 78 characters long.
      *
