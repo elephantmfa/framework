@@ -3,6 +3,7 @@
 namespace Elephant\Filtering;
 
 use Elephant\Filtering\Scanner;
+use Elephant\Contracts\Mail\Mail;
 
 class ClamAV implements Scanner
 {
