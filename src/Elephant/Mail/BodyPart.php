@@ -2,9 +2,9 @@
 
 namespace Elephant\Mail;
 
+use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
-use Illuminate\Contracts\Support\Arrayable;
 
 class BodyPart implements Arrayable
 {
@@ -17,9 +17,9 @@ class BodyPart implements Arrayable
     protected $contentType;
     protected $body = '';
 
-    public static function fromRaw(string $raw): BodyPart
+    public static function fromRaw(string $raw): self
     {
-        $bp = new static;
+        $bp = new static();
         $bp->disposition = 'body';
 
         $lines = explode("\n", $raw);
@@ -45,7 +45,7 @@ class BodyPart implements Arrayable
             if (preg_match('/^\s+\S/', $line)) {
                 $currentLine .= $line;
             } else {
-                if (! empty(trim($currentLine))) {
+                if (!empty(trim($currentLine))) {
                     static::parseData($bp, $currentLine);
                 }
                 $currentLine = $line;
@@ -64,7 +64,7 @@ class BodyPart implements Arrayable
     {
         return $this->raw;
     }
-    
+
     /**
      * Get the attachment's metadata as an array.
      *
@@ -73,11 +73,11 @@ class BodyPart implements Arrayable
     public function toArray()
     {
         return [
-            'name' => $this->filename,
-            'disposition' => $this->disposition,
-            'size' => $this->size,
+            'name'                      => $this->filename,
+            'disposition'               => $this->disposition,
+            'size'                      => $this->size,
             'content_transfer_encoding' => $this->contentTransferEncoding,
-            'content_type' => $this->contentType,
+            'content_type'              => $this->contentType,
         ];
     }
 
@@ -99,6 +99,7 @@ class BodyPart implements Arrayable
      * Get one of the protected parameters.
      *
      * @param mixed $val
+     *
      * @return void
      */
     public function __get($val)
@@ -126,7 +127,8 @@ class BodyPart implements Arrayable
      * Parse the body part data.
      *
      * @param BodyPart &$bp
-     * @param string $currentLine
+     * @param string   $currentLine
+     *
      * @return void
      */
     private static function parseData(&$bp, $currentLine)

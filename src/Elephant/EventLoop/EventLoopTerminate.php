@@ -2,8 +2,8 @@
 
 namespace Elephant\EventLoop;
 
-use React\Socket\ConnectionInterface;
 use Illuminate\Contracts\Container\Container;
+use React\Socket\ConnectionInterface;
 
 class EventLoopTerminate
 {

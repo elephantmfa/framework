@@ -60,18 +60,18 @@ class SpamAssassin implements Scanner
         $this->user = '';
     }
 
-    /** {@inheritDoc} */
+    /** {@inheritdoc} */
     public function setUser(string $email): Scanner
     {
         return $this;
     }
 
-    /** {@inheritDoc} */
+    /** {@inheritdoc} */
     public function scan(): ?Scanner
     {
         $timeBegin = microtime(true);
         [$type, $path] = explode('://', config('scanners.spamassassin.socket'), 2);
-        if (! isset($path) || empty($path) || ! isset($type) || empty($type)) {
+        if (!isset($path) || empty($path) || !isset($type) || empty($type)) {
             $this->error = "Invalid socket: {$type}{$path}.";
 
             return null;
@@ -105,8 +105,8 @@ class SpamAssassin implements Scanner
         }
 
         $socket = socket_create($type, SOCK_STREAM, $proto);
-        if (! $socket) {
-            $this->error = "Unable to create socket!";
+        if (!$socket) {
+            $this->error = 'Unable to create socket!';
 
             return null;
         }
@@ -116,31 +116,31 @@ class SpamAssassin implements Scanner
             SO_SNDTIMEO,
             ['sec' => config('scanners.spamassassin.timeout', 10), 'usec' => 0]
         );
-        if (! @socket_connect($socket, $path, $port)) {
-            $this->error = "Unable to connect to socket!";
+        if (!@socket_connect($socket, $path, $port)) {
+            $this->error = 'Unable to connect to socket!';
 
             return null;
         }
 
-        if (! $this->socketWrite($socket, "HEADERS SPAMC/1.2")) {
-            $this->error = "Unable to write command to socket!";
+        if (!$this->socketWrite($socket, 'HEADERS SPAMC/1.2')) {
+            $this->error = 'Unable to write command to socket!';
 
             return null;
         }
-        if (! $this->socketWrite($socket, "Content-length: {$this->contentLength}")) {
-            $this->error = "Unable to write content-length to socket!";
+        if (!$this->socketWrite($socket, "Content-length: {$this->contentLength}")) {
+            $this->error = 'Unable to write content-length to socket!';
 
             return null;
         }
-        if (isset($this->user) && ! empty($this->user)) {
-            if (! $this->socketWrite($socket, "User: {$this->user}")) {
-                $this->error = "Unable to write user to socket!";
+        if (isset($this->user) && !empty($this->user)) {
+            if (!$this->socketWrite($socket, "User: {$this->user}")) {
+                $this->error = 'Unable to write user to socket!';
 
                 return null;
             }
         }
-        if (! $this->socketWrite($socket, "")) {
-            $this->error = "Unable to write to socket!";
+        if (!$this->socketWrite($socket, '')) {
+            $this->error = 'Unable to write to socket!';
 
             return null;
         }
@@ -150,7 +150,7 @@ class SpamAssassin implements Scanner
         foreach ($lines as $line) {
             $bytes += strlen("$line\r\n");
             if (!$this->socketWrite($socket, $line)) {
-                $this->error = "Unable to write to socket!";
+                $this->error = 'Unable to write to socket!';
 
                 return null;
             }
@@ -162,7 +162,7 @@ class SpamAssassin implements Scanner
         $currentLine = '';
         while ($line = @socket_read($socket, 512, PHP_NORMAL_READ)) {
             if (preg_match('/^\s+[a-z]+/i', $line)) {
-                $currentLine .= " " . trim($line);
+                $currentLine .= ' '.trim($line);
 
                 continue;
             }
@@ -173,9 +173,9 @@ class SpamAssassin implements Scanner
                 continue;
             }
             if (preg_match('/^[a-z\-]+: /i', $line)) {
-                $regex = '/^X-Spam-Status: ' .
-                    '(?:(?:Yes|No), score=[0-9\.\-]+ required=[0-9\.\-]+ )?' .
-                    'tests=(.*) autolearn=(yes|no)(?: autolearn_force=(yes|no))?' .
+                $regex = '/^X-Spam-Status: '.
+                    '(?:(?:Yes|No), score=[0-9\.\-]+ required=[0-9\.\-]+ )?'.
+                    'tests=(.*) autolearn=(yes|no)(?: autolearn_force=(yes|no))?'.
                     ' version=([0-9\.]+)$/';
                 if (preg_match($regex, $currentLine, $matches)) {
                     [, $tests, $autolearn, $autolearn_force, $version] = $matches;
@@ -206,7 +206,7 @@ class SpamAssassin implements Scanner
         return $this;
     }
 
-    /** {@inheritDoc} */
+    /** {@inheritdoc} */
     public function getResults()
     {
         return $this->results;
@@ -216,12 +216,13 @@ class SpamAssassin implements Scanner
      * Write to a socket cleanly.
      *
      * @param resource|bool $socket
-     * @param string $in
-     * @return boolean
+     * @param string        $in
+     *
+     * @return bool
      */
     private function socketWrite($socket, string $in): bool
     {
-        if (! $socket) {
+        if (!$socket) {
             return false;
         }
         $le = "\r\n";

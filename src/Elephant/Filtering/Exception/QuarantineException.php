@@ -7,10 +7,11 @@ use Exception;
 class QuarantineException extends Exception
 {
     /**
-     * Create a new QuarantineException
+     * Create a new QuarantineException.
      *
      * @param string $message
-     * @param int $code
+     * @param int    $code
+     *
      * @return void
      */
     public function __construct(string $message = 'Ok', int $code = 250)

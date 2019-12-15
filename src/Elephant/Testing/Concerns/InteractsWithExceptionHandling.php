@@ -33,7 +33,8 @@ trait InteractsWithExceptionHandling
     /**
      * Only handle the given exceptions via the exception handler.
      *
-     * @param  array  $exceptions
+     * @param array $exceptions
+     *
      * @return $this
      */
     protected function handleExceptions(array $exceptions)
@@ -44,7 +45,8 @@ trait InteractsWithExceptionHandling
     /**
      * Disable exception handling for the test.
      *
-     * @param  array  $except
+     * @param array $except
+     *
      * @return $this
      */
     protected function withoutExceptionHandling(array $except = [])
@@ -60,8 +62,9 @@ trait InteractsWithExceptionHandling
             /**
              * Create a new class instance.
              *
-             * @param  \Illuminate\Contracts\Debug\ExceptionHandler  $originalHandler
-             * @param  array  $except
+             * @param \Illuminate\Contracts\Debug\ExceptionHandler $originalHandler
+             * @param array                                        $except
+             *
              * @return void
              */
             public function __construct($originalHandler, $except = [])
@@ -73,7 +76,8 @@ trait InteractsWithExceptionHandling
             /**
              * Report the given exception.
              *
-             * @param  \Exception  $e
+             * @param \Exception $e
+             *
              * @return void
              */
             public function report(Exception $e)
@@ -84,7 +88,8 @@ trait InteractsWithExceptionHandling
             /**
              * Determine if the exception should be reported.
              *
-             * @param  \Exception  $e
+             * @param \Exception $e
+             *
              * @return bool
              */
             public function shouldReport(Exception $e)
@@ -95,11 +100,12 @@ trait InteractsWithExceptionHandling
             /**
              * Render the given exception.
              *
-             * @param  \Illuminate\Http\Request  $request
-             * @param  \Exception  $e
-             * @return mixed
+             * @param \Illuminate\Http\Request $request
+             * @param \Exception               $e
              *
              * @throws \Symfony\Component\HttpKernel\Exception\NotFoundHttpException|\Exception
+             *
+             * @return mixed
              */
             public function render($request, Exception $e)
             {
@@ -123,13 +129,14 @@ trait InteractsWithExceptionHandling
             /**
              * Render the exception for the console.
              *
-             * @param  \Symfony\Component\Console\Output\OutputInterface  $output
-             * @param  \Exception  $e
+             * @param \Symfony\Component\Console\Output\OutputInterface $output
+             * @param \Exception                                        $e
+             *
              * @return void
              */
             public function renderForConsole($output, Exception $e)
             {
-                (new ConsoleApplication)->renderException($e, $output);
+                (new ConsoleApplication())->renderException($e, $output);
             }
         });
 

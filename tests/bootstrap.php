@@ -10,7 +10,7 @@
 | loading of any our classes "manually". Feels great to relax.
 |
 */
-require __DIR__ . '/../vendor/autoload.php';
+require __DIR__.'/../vendor/autoload.php';
 
 use Illuminate\Support\Carbon;
 

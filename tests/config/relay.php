@@ -20,7 +20,7 @@ return [
     | the IP isn't provided, it will default to 127.0.0.1. These can be
     | names, so that distinctions can be made with filters.
     */
-    'ports' => [ ],
+    'ports' => [],
 
     /*
     |--------------------------------------------------------------------------

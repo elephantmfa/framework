@@ -2,9 +2,9 @@
 
 namespace Elephant\Foundation\Mail;
 
-use Elephant\Foundation\Application;
 use Elephant\Contracts\Mail\Kernel as KernelContract;
 use Elephant\EventLoop\Mail\EventLoopData;
+use Elephant\Foundation\Application;
 
 class Kernel implements KernelContract
 {
@@ -36,47 +36,47 @@ class Kernel implements KernelContract
      */
     protected $filters = [
 
-        /**
+        /*
          * A list of filters to apply upon connection.
          *
          * @var array
          */
-        'connect' => [ ],
+        'connect' => [],
 
-        /**
+        /*
          * A list of filters to apply when HELO/EHLO command is called.
          *
          * @var array
          */
-        'helo' => [ ],
+        'helo' => [],
 
-        /**
+        /*
          * A list of filters to call when the MAIL FROM command is called.
          *
          * @var array
          */
-        'mail_from' => [ ],
+        'mail_from' => [],
 
-        /**
+        /*
          * A list of filters to call upon each call of RCPT TO command.
          *
          * @var array
          */
-        'rcpt_to' => [ ],
+        'rcpt_to' => [],
 
-        /**
+        /*
          * A list of filters to apply at the end of the DATA command.
          *
          * @var array
          */
-        'data' => [ ],
+        'data' => [],
 
-        /**
+        /*
          * A list of filters to apply to queued mail.
          *
          * @var array
          */
-        'queued' => [ ],
+        'queued' => [],
     ];
 
     /**
@@ -101,7 +101,7 @@ class Kernel implements KernelContract
 
     public function bootstrap()
     {
-        if (! $this->app->hasBeenBootstrapped()) {
+        if (!$this->app->hasBeenBootstrapped()) {
             $this->app->bootstrapWith($this->bootstrappers());
         }
 
