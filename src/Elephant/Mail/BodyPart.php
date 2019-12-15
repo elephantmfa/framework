@@ -93,10 +93,10 @@ class BodyPart implements Arrayable
     public function getBody()
     {
         if ($this->contentTransferEncoding == 'base64') {
-            return base64_decode($this->body);
+            return base64_decode(preg_replace('/\r?\n?/', '', $this->body));
         }
 
-        return $this->body;
+        return rtrim($this->body, "\n");
     }
 
     /**
