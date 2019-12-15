@@ -158,7 +158,7 @@ class EventLoopData
             $this->handleVerify($data);
         } elseif (Str::startsWith($lcData, 'starttls')) {
             $this->handleTls($data);
-        } elseif (!empty($data)) {
+        } elseif (! empty($data)) {
             $this->handleUnknownCommand($data);
         }
     }
@@ -172,6 +172,7 @@ class EventLoopData
      */
     protected function handleConnect(string $data)
     {
+        unset($this->mail);
         $this->mail = $this->app->make(Mail::class);
         if (preg_match(';CONNECT remote:\w+://(.+):\d+ local:\w+://.+:(.+);', $data, $matches)) {
             [, $remoteIp, $localPort] = $matches;
@@ -216,6 +217,7 @@ class EventLoopData
      */
     protected function handleQuit(string $data)
     {
+        unset($this->mail);
         $this->close('221 2.0.0 Goodbye');
     }
 
@@ -252,6 +254,7 @@ class EventLoopData
      */
     protected function handleReset(string $data)
     {
+        unset($this->mail);
         $nmail = $this->app->make(Mail::class);
         $nmail->setConnection($this->mail->getConnection());
         $nmail->setHelo($this->mail->getHelo() ?? '');
@@ -281,7 +284,7 @@ class EventLoopData
     protected function handleHelo(string $helo)
     {
         $time = microtime(true);
-        if (!empty($this->mail->getSender())) {
+        if (! empty($this->mail->getSender())) {
             $nmail = $this->app[Mail::class];
             $nmail->setConnection($this->mail->getConnection());
             $nmail->setHelo($this->mail->getHelo() ?? '');
@@ -469,7 +472,7 @@ class EventLoopData
             if (Str::startsWith($data, '--'.$this->mail->getMimeBoundary()) ||
                 empty(trim($data))
             ) {
-                if (!empty($this->currentLine)) {
+                if (! empty($this->currentLine)) {
                     $this->addHeader();
                 }
                 $this->readingBody = true;
@@ -485,7 +488,7 @@ class EventLoopData
                     $this->currentLine .= ' '.trim($data);
                 }
             } else {
-                if (!empty($this->currentLine)) {
+                if (! empty($this->currentLine)) {
                     $this->addHeader();
                 }
                 $this->currentLine = trim($data);
@@ -495,7 +498,7 @@ class EventLoopData
         }
 
         if (Str::startsWith($data, '--'.$this->mail->getMimeBoundary()) && !Str::endsWith($data, '--')) {
-            if (!empty(trim($this->currentLine))) {
+            if (! empty(trim($this->currentLine))) {
                 $this->mail->attachRaw($this->currentLine);
             }
             $this->currentLine = '';
@@ -505,7 +508,7 @@ class EventLoopData
             $this->endingMail = true;
         }
         if (trim($data) == "--{$this->mail->getMimeBoundary()}--") {
-            if (!empty(trim($this->currentLine))) {
+            if (! empty(trim($this->currentLine))) {
                 $this->mail->attachRaw($this->currentLine);
             }
             $this->endingMail = true;
@@ -539,7 +542,7 @@ class EventLoopData
 
                 return;
             }
-            if (!empty(trim($this->currentLine))) {
+            if (! empty(trim($this->currentLine))) {
                 $this->mail->attachRaw($this->currentLine);
             }
             $this->currentLine = '';
