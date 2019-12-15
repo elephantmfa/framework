@@ -2,10 +2,11 @@
 
 namespace Elephant\Mail;
 
-use Elephant\Contracts\Mail\Mail as MailContract;
-use Illuminate\Contracts\Support\Arrayable;
-use Illuminate\Contracts\Support\Jsonable;
 use Illuminate\Support\Str;
+use Illuminate\Support\Carbon;
+use Illuminate\Contracts\Support\Jsonable;
+use Illuminate\Contracts\Support\Arrayable;
+use Elephant\Contracts\Mail\Mail as MailContract;
 
 class Mail implements MailContract, Jsonable, Arrayable
 {
@@ -17,9 +18,9 @@ class Mail implements MailContract, Jsonable, Arrayable
     protected $connection;
     protected $headers = [];
     protected $bodyParts = [];
-    protected $queueId;
-    protected $finalDestination;
-    protected $boundary;
+    protected $queueId = '';
+    protected $finalDestination = '';
+    protected $boundary = '';
 
     public function __construct()
     {
@@ -145,7 +146,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     {
         $this->bodyParts[] = $body;
 
-        if (!isset($this->boundary)) {
+        if (empty($this->boundary)) {
             $this->createBoundary();
         }
 
@@ -159,7 +160,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     {
         $this->bodyParts[] = BodyPart::fromRaw($body);
 
-        if (!isset($this->boundary)) {
+        if (empty($this->boundary)) {
             $this->createBoundary();
         }
 
@@ -198,9 +199,9 @@ class Mail implements MailContract, Jsonable, Arrayable
      */
     public function setFinalDestination(string $destination): MailContract
     {
-        if (!in_array($destination, ['allow', 'reject', 'defer', 'quarantine', 'drop']) &&
-            !validate_ip($destination) &&
-            !validate_ip($destination, true)
+        if (! in_array($destination, ['allow', 'reject', 'defer', 'quarantine', 'drop']) &&
+            ! validate_ip($destination) &&
+            ! validate_ip($destination, true)
         ) {
             throw new InvalidArgumentException(
                 "\$destination must be an IP, IP:port or ['allow', 'reject', 'defer', 'quarantine', 'drop']"
@@ -209,6 +210,12 @@ class Mail implements MailContract, Jsonable, Arrayable
         $this->finalDestination = $destination;
 
         return $this;
+    }
+
+    /** {@inheritDoc} */
+    public function getFinalDestination(): string
+    {
+        return $this->finalDestination;
     }
 
     /**
@@ -381,7 +388,7 @@ class Mail implements MailContract, Jsonable, Arrayable
      */
     public function getQueueId(): ?string
     {
-        if (!isset($this->queueId)) {
+        if (empty($this->queueId)) {
             $queueId = sha1(
                 strtoupper(Str::random()).
                     Carbon::now()->toString().
@@ -420,6 +427,14 @@ class Mail implements MailContract, Jsonable, Arrayable
     public function getRaw(): ?string
     {
         return $this->raw;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public function getBodyParts(): array
+    {
+        return $this->bodyParts;
     }
 
     /**

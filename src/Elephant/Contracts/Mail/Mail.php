@@ -260,6 +260,13 @@ interface Mail
     public function getMimeBoundary(): ?string;
 
     /**
+     * Get the final destination for the mail.
+     *
+     * @return string
+     */
+    public function getFinalDestination(): string;
+
+    /**
      * Append to the end of the raw data.
      *
      * @param string $rawData
@@ -274,6 +281,13 @@ interface Mail
      * @return string|null
      */
     public function getRaw(): ?string;
+
+    /**
+     * Get the body parts of the mail.
+     *
+     * @return array<BodyPart>
+     */
+    public function getBodyParts(): array;
 
     /**
      * Removes all recipients from the mail.
