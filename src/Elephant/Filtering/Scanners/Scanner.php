@@ -49,7 +49,7 @@ abstract class Scanner implements ScannerContract
     }
 
     /** {@inheritdoc} */
-    public function setUser(string $email): Scanner
+    public function setUser(string $email): ScannerContract
     {
         return $this;
     }
