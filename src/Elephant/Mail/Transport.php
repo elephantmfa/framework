@@ -1,6 +1,6 @@
 <?php
 
-namespace Elepahnt\Mail;
+namespace Elephant\Mail;
 
 use Elephant\Contracts\Mail\Mail;
 
@@ -21,7 +21,7 @@ class Transport
 
     private function deliver()
     {
-        $finalDestiny = $this->mail->getFinalDestiny();
+        $finalDestiny = $this->mail->getFinalDestination();
 
         $relayRegex = '/
             ^(?:relay:)?
