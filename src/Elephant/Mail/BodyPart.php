@@ -45,11 +45,15 @@ class BodyPart implements Arrayable
             if (preg_match('/^\s+\S/', $line)) {
                 $currentLine .= $line;
             } else {
-                if (!empty(trim($currentLine))) {
+                if (! empty(trim($currentLine))) {
                     static::parseData($bp, $currentLine);
                 }
                 $currentLine = $line;
             }
+        }
+
+        if (! isset($this->size)) {
+            $this->size = strlen($this->getBody());
         }
 
         return $bp;
