@@ -52,8 +52,8 @@ class BodyPart implements Arrayable
             }
         }
 
-        if (! isset($this->size)) {
-            $this->size = strlen($this->getBody());
+        if (! isset($bp->size)) {
+            $bp->size = strlen($bp->getBody());
         }
 
         return $bp;
