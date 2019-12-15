@@ -2,16 +2,21 @@
 
 namespace Elephant\Mail\Jobs;
 
-use Elepahnt\Mail\Transport;
-use Elephant\Contracts\Mail\Mail;
-use Elephant\Foundation\Bus\Dispatchable;
+use Elephant\Mail\Transport;
 use Illuminate\Bus\Queueable;
+use Elephant\Contracts\Mail\Mail;
+use Illuminate\Pipeline\Pipeline;
+use Elephant\Foundation\Bus\Dispatchable;
 
 class QueueProcessJob
 {
     use Dispatchable, Queueable;
 
+    /** @var \Elephant\Contracts\Mail\Mail $mail */
     protected $mail;
+
+    /** @var array $filters */
+    protected $filers;
 
     /**
      * Create a new job instance.
@@ -21,6 +26,7 @@ class QueueProcessJob
     public function __construct(Mail $mail, array $filters)
     {
         $this->mail = $mail;
+        $this->filters = $filters;
     }
 
     /**
@@ -31,7 +37,7 @@ class QueueProcessJob
     public function handle()
     {
         $this->handleWrapper(function () {
-            $this->mail = (new Pipeline($this->app))
+            $this->mail = (new Pipeline(app()))
                 ->send($this->mail)
                 ->via('filter')
                 ->through($this->filters['queued'] ?? [])
@@ -39,6 +45,8 @@ class QueueProcessJob
         });
 
         Transport::send($this->mail);
+
+        app('filesystem')->disk('tmp')->delete("queue/{$this->mail->getQueueId()}");
     }
 
     /**
