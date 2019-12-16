@@ -82,12 +82,17 @@ class ClamAV extends Scanner
             if ($maxEmailSize != 0) {
                 $emailContents = substr($emailContents, 0, $maxEmailSize);
             }
-            $this->filesystem->disk('tmp')->put("clamav/{$queueId}/email.eml", $emailContents);
+            $this->filesystem->disk('tmp')->put("clamav/{$queueId}/full-email.eml", $emailContents);
         }
         $maxSize = config('scanners.clamav.max_size', 64 * 1000); // 64 Kb
 
         foreach ($this->mail->getBodyParts() as $i => $bodyPart) {
-            $name = "part{$i}";
+            $name = "body-part{$i}";
+
+            if ($bodyPart->disposition == 'body' && preg_match(';application/html;', $bodyPart->contentType)) {
+                $name .= '.html';
+            }
+
             if (! is_null($bodyPart->filename)) {
                 $name = $bodyPart->filename;
             }
@@ -112,7 +117,9 @@ class ClamAV extends Scanner
 
         if (! $this->socketWrite("MULTISCAN {$fpath}")) {
             $this->error = 'Unable to write to socket!';
-            $this->error .= ' ' . socket_strerror(socket_last_error($this->socket));
+            if (config('app.debug', false)) {
+                $this->error .= ' ' . socket_strerror(socket_last_error($this->socket));
+            }
         }
 
         $this->read();
@@ -134,7 +141,8 @@ class ClamAV extends Scanner
             if ($maxEmailSize != 0) {
                 $emailContents = substr($emailContents, 0, $maxEmailSize);
             }
-            if (! $this->instreamSend($emailContents, 'email.eml')) {
+
+            if (! $this->instreamSend($emailContents, 'full-email.eml')) {
                 return false;
             }
         }
@@ -144,8 +152,14 @@ class ClamAV extends Scanner
             if ($bodyPart->size > $maxSize) {
                 continue;
             }
-            
-            if (! $this->instreamSend($bodyPart->getBody(), $bodyPart->filename ?? "part{$i}")) {
+
+            $defName = "body-part{$i}";
+
+            if ($bodyPart->disposition == 'body' && preg_match(';application/html;', $bodyPart->contentType)) {
+                $defName .= '.html';
+            }
+
+            if (! $this->instreamSend($bodyPart->getBody(), $bodyPart->filename ?? $defName)) {
                 return false;
             }
         }
@@ -155,6 +169,7 @@ class ClamAV extends Scanner
 
     private function instreamSend(string $body, string $filename)
     {
+        debug("clamav: sending $filename");
         if (! isset($this->socket) || ! is_resource($this->socket)) {
             if (! $this->connect()) {
                 return false;
@@ -163,7 +178,9 @@ class ClamAV extends Scanner
 
         if (! $this->sendCommand("INSTREAM")) {
             $this->error = 'Unable to write to socket!';
-            $this->error .= ' ' . socket_strerror(socket_last_error($this->socket));
+            if (config('app.debug', false)) {
+                $this->error .= ' ' . socket_strerror(socket_last_error($this->socket));
+            }
 
             return false;
         }
@@ -171,14 +188,21 @@ class ClamAV extends Scanner
         while (strlen($left) > 0) {
             $chunk = substr($left, 0, self::BYTES_WRITE);
             $left = substr($left, self::BYTES_WRITE);
-            $this->sendChunk($chunk);
+            if (! $this->sendChunk($chunk)) {
+                return false;
+            }
         }
 
-        $this->endStream();
+        if (! $this->endStream()) {
+            $this->error = "Unable to end stream.";
+            return false;
+        }
 
         if (! $this->read($filename)) {
             return false;
         }
+
+        return true;
     }
 
     /**
@@ -195,6 +219,8 @@ class ClamAV extends Scanner
             if (! empty($fileName)) {
                 $line = preg_replace('/.*:/', "$fileName:", $line, 1);
             }
+
+            debug("clamav: response: $line");
 
             if (preg_match(self::FOUND_REGEX, $line, $matches)) {
                 [,$fname, $vname] = $matches;
@@ -218,9 +244,19 @@ class ClamAV extends Scanner
     {
         $size = pack('N', strlen($chunk));
         // size packet
-        socket_send($this->socket, $size, strlen($size), 0);
+        if (! socket_send($this->socket, $size, strlen($size), 0)) {
+            $this->error = "Cannot send size for chunk.";
+
+            return false;
+        }
         // data packet
-        socket_send($this->socket, $chunk, strlen($chunk), 0);
+        if (! socket_send($this->socket, $chunk, strlen($chunk), 0)) {
+            $this->error = "Cannot send chunk.";
+
+            return false;
+        }
+
+        return true;
     }
 
     private function send($val)
@@ -235,7 +271,7 @@ class ClamAV extends Scanner
 
     private function endStream()
     {
-        $this->send(pack('N', 0));
+        return $this->send(pack('N', 0));
     }
 
     private function connect()
@@ -251,13 +287,17 @@ class ClamAV extends Scanner
         $this->socket = socket_create($type, SOCK_STREAM, $proto);
         if (! $this->socket) {
             $this->error = 'Unable to create socket!';
-            $this->error .= ' ' . socket_strerror(socket_last_error($this->socket));
+            if (config('app.debug', false)) {
+                $this->error .= ' ' . socket_strerror(socket_last_error($this->socket));
+            }
 
             return false;
         }
         if (! @socket_connect($this->socket, $path, $port)) {
             $this->error = 'Unable to connect to socket!';
-            $this->error .= ' ' . socket_strerror(socket_last_error($this->socket));
+            if (config('app.debug', false)) {
+                $this->error .= ' ' . socket_strerror(socket_last_error($this->socket));
+            }
 
             return false;
         }
