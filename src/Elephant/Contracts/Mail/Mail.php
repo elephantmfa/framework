@@ -303,4 +303,13 @@ interface Mail
      * @return \Elephant\Contracts\Mail\Mail
      */
     public function removeRecipient(string $recipient): Mail;
+
+    /**
+     * Processes a line to generate the mail object.
+     *
+     * @param string $data
+     * @return bool Whether or not the mail has been accepted and
+     *   finished processing.
+     */
+    public function processLine(string $data): bool;
 }

@@ -35,37 +35,16 @@ class EventLoopData
     /**
      * The mail interface to be working with.
      *
-     * @var \Elephant\Contracts\Mail\Mail
+     * @var \Elephant\Contracts\Mail\Mail $mail
      */
     protected $mail;
 
     /**
      * Whether or not the data loop is in read mode or not.
      *
-     * @var bool
+     * @var bool $readMode
      */
-    protected $readMode = false;
-
-    /**
-     * The current line being read in.
-     *
-     * @var string
-     */
-    protected $currentLine = '';
-
-    /**
-     * Whether or not we are reading a body.
-     *
-     * @var bool
-     */
-    protected $readingBody = false;
-
-    /**
-     * Whether or not the mail messages is likely ending.
-     *
-     * @var bool
-     */
-    protected $endingMail = false;
+    private $readMode = false;
 
     /**
      * Builds the event loop data invokable class.
@@ -466,94 +445,38 @@ class EventLoopData
      *
      * @return void
      */
-    protected function handleData(string $data)
+    protected function handleData(string $data): void
     {
         if (trim($data) !== '.') {
-            $this->mail->appendToRaw($data);
-        }
-        if (!$this->readingBody) {
-            if (Str::startsWith($data, '--'.$this->mail->getMimeBoundary()) ||
-                empty(trim($data))
-            ) {
-                if (! empty($this->currentLine)) {
-                    $this->addHeader();
-                }
-                $this->readingBody = true;
-                $this->currentLine = '';
-
+            if (! $this->mail->processLine($data)) {
                 return;
             }
-
-            if (preg_match('/^\s+\S/', $data)) {
-                if (!$this->app->config['relay.unfold_headers']) {
-                    $this->currentLine .= "\n".trim($data, "\r\n");
-                } else {
-                    $this->currentLine .= ' '.trim($data);
-                }
-            } else {
-                if (! empty($this->currentLine)) {
-                    $this->addHeader();
-                }
-                $this->currentLine = trim($data);
-            }
-
-            return;
         }
 
-        if (Str::startsWith($data, '--'.$this->mail->getMimeBoundary()) && !Str::endsWith($data, '--')) {
-            if (! empty(trim($this->currentLine))) {
-                $this->mail->attachRaw($this->currentLine);
-            }
-            $this->currentLine = '';
+        $time = microtime(true);
+        $this->readingBody = false;
+        $this->readMode = false;
+        $this->endingMail = false;
+        $this->currentLine = '';
+        $this->handleWrapper(function () {
+            $this->mail = (new Pipeline($this->app))
+                ->send($this->mail)
+                ->via('filter')
+                ->through($this->filters['data'] ?? [])
+                ->thenReturn();
+            $queueId = $this->generateQueueId();
+            $this->say("250 2.0.0 Ok: queued as $queueId");
+        });
+        $this->mail->timings['data'] = microtime(true) - $time;
+
+        $queueProcess = $this->app->config['relay.queue_processor'] ?? 'process';
+        if ($queueProcess == 'process') {
+            QueueProcessJob::dispatchNow($this->mail, $this->filters);
+        } elseif ($queueProcess == 'queue') {
+            QueueProcessJob::dispatch($this->mail, $this->filters);
+        } else { // none
+            Transport::send($this->mail);
         }
-
-        if (empty($this->mail->getMimeBoundary()) && substr_count($this->currentLine, '.') > 0) {
-            $this->endingMail = true;
-        }
-        if (trim($data) == "--{$this->mail->getMimeBoundary()}--") {
-            if (! empty(trim($this->currentLine))) {
-                $this->mail->attachRaw($this->currentLine);
-            }
-            $this->endingMail = true;
-        }
-        if ($this->endingMail && empty(trim($data))) {
-            if (substr_count($this->currentLine, "\n.\n") > 0) {
-                $time = microtime(true);
-                $this->readingBody = false;
-                $this->readMode = false;
-                $this->endingMail = false;
-                $this->currentLine = '';
-                $this->handleWrapper(function () {
-                    $this->mail = (new Pipeline($this->app))
-                        ->send($this->mail)
-                        ->via('filter')
-                        ->through($this->filters['data'] ?? [])
-                        ->thenReturn();
-                    $queueId = $this->generateQueueId();
-                    $this->say("250 2.0.0 Ok: queued as $queueId");
-                });
-                $this->mail->timings['data'] = microtime(true) - $time;
-
-                $queueProcess = $this->app->config['relay.queue_processor'] ?? 'process';
-                if ($queueProcess == 'process') {
-                    QueueProcessJob::dispatchNow($this->mail, $this->filters);
-                } elseif ($queueProcess == 'queue') {
-                    QueueProcessJob::dispatch($this->mail, $this->filters);
-                } else { // none
-                    Transport::send($this->mail);
-                }
-
-                return;
-            }
-            if (! empty(trim($this->currentLine))) {
-                $this->mail->attachRaw($this->currentLine);
-            }
-            $this->currentLine = '';
-
-            return;
-        }
-
-        $this->currentLine .= $data;
     }
 
     /**
@@ -564,6 +487,7 @@ class EventLoopData
     protected function generateQueueId()
     {
         $queueId = $this->mail->getQueueId();
+        $folder = substr($queueId, 0, 2);
 
         // First, let's check if queuing is disabled, and handle that upfront.
         if ($this->app->config['relay.queue_processor'] == 'none') {
@@ -572,7 +496,7 @@ class EventLoopData
 
         // If queueing is enabled, we need to store the mail in the queue for
         //   later processing.
-        $this->app->filesystem->disk('tmp')->put("queue/{$queueId}", $this->mail->getRaw());
+        $this->app->filesystem->disk('tmp')->put("queue/{$folder}/{$queueId}", $this->mail->getRaw());
 
         return $queueId;
     }
@@ -607,25 +531,6 @@ class EventLoopData
             }
             $this->say((string) $drop);
             $this->mail->setFinalDestination('drop');
-        }
-    }
-
-    /**
-     * Add a header to the mail object. This is to DRY up some functionality.
-     *
-     * @return void
-     */
-    private function addHeader(): void
-    {
-        if (preg_match('/^(.+): (.+)$/s', $this->currentLine, $matches)) {
-            [, $header, $value] = $matches;
-            if (strtolower($header) == 'content-type') {
-                if (preg_match('/boundary=["\'](.*)["\']/', $value, $matches)) {
-                    $this->mail->setMimeBoundary($matches[1]);
-                }
-            }
-
-            $this->mail->addHeader(strtolower($header), $value);
         }
     }
 }

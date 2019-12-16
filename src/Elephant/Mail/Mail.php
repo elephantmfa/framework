@@ -22,6 +22,27 @@ class Mail implements MailContract, Jsonable, Arrayable
     protected $finalDestination = '';
     protected $boundary = '';
 
+    /**
+     * The current line being read in.
+     *
+     * @var string $currentLine
+     */
+    private $currentLine = '';
+
+    /**
+     * Whether or not we are reading a body.
+     *
+     * @var bool $readingBody
+     */
+    private $readingBody = false;
+
+    /**
+     * Whether or not the mail messages is likely ending.
+     *
+     * @var bool $endingMail
+     */
+    private $endingMail = false;
+
     public function __construct()
     {
         $this->connection = new Connection();
@@ -475,6 +496,72 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /** {@inheritDoc} */
+    public function processLine(string $data): bool
+    {
+        $this->appendToRaw($data);
+        if (! $this->readingBody) {
+            if (Str::startsWith($data, '--' . $this->getMimeBoundary()) ||
+                empty(trim($data))
+            ) {
+                if (! empty($this->currentLine)) {
+                    $this->processHeader();
+                }
+                $this->readingBody = true;
+                $this->currentLine = '';
+
+                return false;
+            }
+
+            if (preg_match('/^\s+\S/', $data)) {
+                if (! config('relay.unfold_headers')) {
+                    $this->currentLine .= "\n".trim($data, "\r\n");
+                } else {
+                    $this->currentLine .= ' '.trim($data);
+                }
+            } else {
+                if (! empty($this->currentLine)) {
+                    $this->processHeader();
+                }
+                $this->currentLine = trim($data);
+            }
+
+            return false;
+        }
+
+        if (Str::startsWith($data, '--'.$this->getMimeBoundary()) && !Str::endsWith($data, '--')) {
+            if (! empty(trim($this->currentLine))) {
+                $this->attachRaw($this->currentLine);
+            }
+            $this->currentLine = '';
+        }
+
+        if (empty($this->getMimeBoundary()) && substr_count($this->currentLine, '.') > 0) {
+            $this->endingMail = true;
+        }
+        if (trim($data) == "--{$this->getMimeBoundary()}--") {
+            if (! empty(trim($this->currentLine))) {
+                $this->attachRaw($this->currentLine);
+            }
+            $this->endingMail = true;
+        }
+        if ($this->endingMail && empty(trim($data))) {
+            if (substr_count($this->currentLine, "\n.\n") > 0) {
+                return true;
+            }
+            if (! empty(trim($this->currentLine))) {
+                $this->attachRaw($this->currentLine);
+            }
+            $this->currentLine = '';
+
+            return false;
+        }
+
+        $this->currentLine .= $data;
+
+        return false;
+    }
+
+    /** {@inheritDoc} */
     public function toArray()
     {
         return [
@@ -516,5 +603,24 @@ class Mail implements MailContract, Jsonable, Arrayable
         $this->alterHeader('content-type', function ($header) use ($boundary) {
             return "multipart/mixed; boundary=\"$boundary\"";
         });
+    }
+
+    /**
+     * Add a header to the mail object. This is to DRY up some functionality.
+     *
+     * @return void
+     */
+    private function processHeader(): void
+    {
+        if (preg_match('/^(.+): (.+)$/s', $this->currentLine, $matches)) {
+            [, $header, $value] = $matches;
+            if (strtolower($header) == 'content-type') {
+                if (preg_match('/boundary=["\'](.*)["\']/', $value, $matches)) {
+                    $this->setMimeBoundary($matches[1]);
+                }
+            }
+
+            $this->addHeader(strtolower($header), $value);
+        }
     }
 }
