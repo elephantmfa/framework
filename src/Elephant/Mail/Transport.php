@@ -34,7 +34,9 @@ class Transport
             return;
         } elseif ($finalDestiny == 'quarantine') {
             // Final Destiny is quarantine
-            app('filesystem')->put("quarantine/{$this->mail->getQueueId()}.eml", $this->mail->getRaw());
+            $queueId = $this->mail->getQueueId();
+            $folderName = substr($queueId, 0, 2);
+            app('filesystem')->put("quarantine/{$folderName}/{$queueId}.eml", $this->mail->getRaw());
         } elseif (preg_match('/^.+@\w+\..+$/', $finalDestiny)) {
             // Final Destiny is an email address
             $this->mail->removeAllRecipients()
