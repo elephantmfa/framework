@@ -3,11 +3,22 @@
 namespace Elephant\Mail;
 
 use Elephant\Contracts\Mail\Mail;
+use Elephant\Foundation\Socket;
+use Elephant\Mail\Exceptions\TransportException;
 
 class Transport
 {
-    /** @var Mail */
+    const RELAY_REGEX = '/
+        ^(?:relay:)?
+        (  \[[A-Fa-f0-9:]+\]  |  \d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}  )
+        :(\d{1,5})
+        /x';
+
+    /** @var Mail $mail */
     private $mail;
+
+    /** @var string $destination */
+    private $destination;
 
     private function __construct(Mail $mail)
     {
@@ -16,23 +27,36 @@ class Transport
 
     public static function send(Mail $mail)
     {
-        (new static($mail))->deliver();
+        (new static($mail))
+            ->route();
     }
 
-    private function deliver()
+    public static function sendTo(Mail $mail, string $destination)
     {
-        $finalDestiny = $this->mail->getFinalDestination();
+        (new static($mail))
+            ->setDestination($destination)
+            ->route($destination);
+    }
 
-        $relayRegex = '/
-            ^(?:relay:)?
-            (  \[[A-Fa-f0-9:]+\]  |  \d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}  )
-            :(\d{1,5})
-            /x';
+    private function setDestination(string $destination): self
+    {
+        $this->destination = $destination;
 
-        if (in_array($finalDestiny, ['drop', 'reject', 'defer'])) {
+        return $this;
+    }
+
+    private function route()
+    {
+        if (empty($this->destination)) {
+            $finalDestiny = $this->mail->getFinalDestination();
+        } else {
+            $finalDestiny = $this->destination;
+        }
+
+        if (in_array($finalDestiny, ['reject', 'defer'])) {
             // Final destiny deletes the mail.
             return;
-        } elseif ($finalDestiny == 'quarantine') {
+        } elseif (in_array($finalDestiny, ['quarantine', 'drop'])) {
             // Final Destiny is quarantine
             $queueId = $this->mail->getQueueId();
             $folderName = substr($queueId, 0, 2);
@@ -44,8 +68,9 @@ class Transport
 
             [$ip, $port] = explode(':', config('relay.default_relay'));
             $ip = trim($ip, '[]');
-            $this->sendTo($ip, $port);
-        } elseif (preg_match($relayRegex, $finalDestiny, $matches)) {
+            $port = intval($port);
+            $this->deliver($ip, $port);
+        } elseif (preg_match(self::RELAY_REGEX, $finalDestiny, $matches)) {
             // Final destiny is a destination ip:port
             /**
              * @var string $ip
@@ -53,7 +78,8 @@ class Transport
              */
             [, $ip, $port] = $matches;
             $ip = trim($ip, '[]');
-            $this->sendTo($ip, $port);
+            $port = intval($port);
+            $this->deliver($ip, $port);
         } else {
             /**
              * @var string $ip
@@ -61,12 +87,50 @@ class Transport
              */
             [$ip, $port] = explode(':', config('relay.default_relay'));
             $ip = trim($ip, '[]');
-            $this->sendTo($ip, $port);
+            $port = intval($port);
+            $this->deliver($ip, $port);
         }
     }
 
-    private function sendTo(string $ip, int $port): void
+    private function deliver(string $ip, int $port): void
     {
-        //
+        $proto = 'ipv4://';
+        if (strpos($proto, ':') !== false) {
+            $proto = 'ipv6://';
+        }
+        $socket = new Socket("{$proto}{$ip}:{$port}");
+        $socket->send('EHLO ' . config('app.name') . "\r\n");
+        $helo = $socket->read(8192, PHP_BINARY_READ);
+        $this->processResp($helo, 'EHLO');
+        if (strpos($helo, 'XFORWARD') !== false) {
+            //@todo: send xforward
+        }
+        $socket->send("MAIL FROM: {$this->mail->envelope->sender}\r\n");
+        $this->processResp($socket->read(), 'MAIL FROM');
+        foreach ($this->mail->envelope->recipients as $recipient) {
+            $socket->send("RCPT TO: {$recipient}\r\n");
+            $this->processResp($socket->read(), 'RCPT TO');
+        }
+
+        $socket->send("DATA\r\n");
+        $this->processResp($socket->read(), 'DATA');
+        foreach (explode("\n", $this->mail->getRaw()) as $line) {
+            if (strpos($line, '.') === 0) {
+                $socket->send('.');
+            }
+            $socket->send("$line\r\n");
+        }
+        $socket->send("\r\n.\r\n");
+        $this->processResp($socket->read(), 'DATA');
+        $socket->close();
+    }
+
+    private function processResp(string $resp, string $stage): void
+    {
+        [$code, $message] = explode(' ', $resp, 2);
+        $code = intval($code);
+        if ($code >= 400) {
+            throw new TransportException($code, $stage, $message);
+        }
     }
 }
