@@ -498,6 +498,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     /** {@inheritDoc} */
     public function processLine(string $data): bool
     {
+        $data = ltrim($data, '.');
         $this->appendToRaw($data);
         if (! $this->readingBody) {
             if (Str::startsWith($data, '--' . $this->getMimeBoundary()) ||
