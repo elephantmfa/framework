@@ -166,7 +166,7 @@ class EventLoopData
 
         $this->handleWrapper(function () {
             if ($this->mail->getFinalDestination() !== 'allow') {
-                $this->mail = (new Pipeline($this->app))
+                $this->mail = $this->app[Pipeline::class]
                     ->send($this->mail)
                     ->via('filter')
                     ->through($this->filters['connect'] ?? [])
@@ -278,7 +278,7 @@ class EventLoopData
         $this->mail->setHelo($helo_parts[1] ?? '');
         $this->handleWrapper(function () use ($helo) {
             if ($this->mail->getFinalDestination() !== 'allow') {
-                $this->mail = (new Pipeline($this->app))
+                $this->mail = $this->app[Pipeline::class]
                     ->send($this->mail)
                     ->via('filter')
                     ->through($this->filters['helo'] ?? [])
@@ -324,7 +324,7 @@ class EventLoopData
         $this->mail->setSender($from_parts[1] ?? '');
         $this->handleWrapper(function () {
             if ($this->mail->getFinalDestination() !== 'allow') {
-                $this->mail = (new Pipeline($this->app))
+                $this->mail = $this->app[Pipeline::class]
                     ->send($this->mail)
                     ->via('filter')
                     ->through($this->filters['mail_from'] ?? [])
@@ -361,7 +361,7 @@ class EventLoopData
         $this->mail->addRecipient($to_parts[1] ?? '');
         $this->handleWrapper(function () {
             if ($this->mail->getFinalDestination() !== 'allow') {
-                $this->mail = (new Pipeline($this->app))
+                $this->mail = $this->app[Pipeline::class]
                     ->send($this->mail)
                     ->via('filter')
                     ->through($this->filters['rcpt_to'] ?? [])
@@ -417,7 +417,7 @@ class EventLoopData
         if (in_array(['proto', 'addr', 'name'], $attrs)) {
             $this->handleWrapper(function () use (&$returnOk) {
                 if ($this->mail->getFinalDestination() !== 'allow') {
-                    $this->mail = (new Pipeline($this->app))
+                    $this->mail = $this->app[Pipeline::class]
                         ->send($this->mail)
                         ->via('filter')
                         ->through($this->filters['connection'] ?? [])
@@ -434,7 +434,7 @@ class EventLoopData
         if (in_array('helo', $attrs)) {
             $this->handleWrapper(function () use (&$returnOk) {
                 if ($this->mail->getFinalDestination() !== 'allow') {
-                    $this->mail = (new Pipeline($this->app))
+                    $this->mail = $this->app[Pipeline::class]
                         ->send($this->mail)
                         ->via('filter')
                         ->through($this->filters['helo'] ?? [])
@@ -472,7 +472,7 @@ class EventLoopData
         $this->currentLine = '';
         $this->handleWrapper(function () {
             if ($this->mail->getFinalDestination() !== 'allow') {
-                $this->mail = (new Pipeline($this->app))
+                $this->mail = $this->app[Pipeline::class]
                     ->send($this->mail)
                     ->via('filter')
                     ->through($this->filters['data'] ?? [])
