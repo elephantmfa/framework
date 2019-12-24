@@ -5,6 +5,8 @@ namespace Elephant\Filtering\Scanners;
 use Elephant\Contracts\Mail\Mail;
 use Elephant\Filtering\Scanners\Scanner;
 use Elephant\Contracts\Mail\Scanner as ScannerContract;
+use Elephant\Foundation\Exceptions\SocketException;
+use Elephant\Foundation\Socket;
 
 class SpamAssassin extends Scanner
 {
@@ -42,143 +44,74 @@ class SpamAssassin extends Scanner
     {
         $timeBegin = microtime(true);
 
-        [$path, $port, $proto, $type] = $this->breakDsn(config('scanners.spamassassin.socket'));
+        try {
+            $socket = new Socket(config('scanners.spamassassin.socket'));
+            $socket->setOption(['sec' => config('scanners.spamassassin.timeout', 10), 'usec' => 0]);
 
-        if (is_null($type)) {
-            $this->error = "Invalid socket type: $type";
-
-            return null;
-        }
-
-        $socket = socket_create($type, SOCK_STREAM, $proto);
-        if (! $socket) {
-            $this->error = 'Unable to create socket!';
-
-            return null;
-        }
-        socket_set_option(
-            $socket,
-            SOL_SOCKET,
-            SO_SNDTIMEO,
-            ['sec' => config('scanners.spamassassin.timeout', 10), 'usec' => 0]
-        );
-        if (! @socket_connect($socket, $path, $port)) {
-            $this->error = 'Unable to connect to socket!';
-            $this->error .= ' ' . socket_strerror(socket_last_error($socket));
-
-            return null;
-        }
-
-        if (! $this->socketWrite($socket, 'HEADERS SPAMC/1.2')) {
-            $this->error = 'Unable to write command to socket!';
-            $this->error .= ' ' . socket_strerror(socket_last_error($socket));
-
-            return null;
-        }
-        if (! $this->socketWrite($socket, "Content-length: {$this->contentLength}")) {
-            $this->error = 'Unable to write content-length to socket!';
-            $this->error .= ' ' . socket_strerror(socket_last_error($socket));
-
-            return null;
-        }
-        if (isset($this->user) && ! empty($this->user)) {
-            if (!$this->socketWrite($socket, "User: {$this->user}")) {
-                $this->error = 'Unable to write user to socket!';
-                $this->error .= ' ' . socket_strerror(socket_last_error($socket));
-
-                return null;
+            $socket->send('HEADERS SPAMC/1.2');
+            $socket->send("Content-length: {$this->contentLength}");
+            if (isset($this->user) && ! empty($this->user)) {
+                $socket->send("User: {$this->user}");
             }
-        }
-        if (! $this->socketWrite($socket, '')) {
-            $this->error = 'Unable to write to socket!';
-            $this->error .= ' ' . socket_strerror(socket_last_error($socket));
+            $socket->send('');
 
-            return null;
-        }
-        // Move on from headers to message.
-        $lines = explode("\n", $this->mail->getRaw());
-        $bytes = 0;
-        foreach ($lines as $line) {
-            $bytes += strlen("$line\r\n");
-            if (! $this->socketWrite($socket, $line)) {
-                $this->error = 'Unable to write to socket!';
-                $this->error .= ' ' . socket_strerror(socket_last_error($socket));
+            // Move on from headers to message.
+            $lines = explode("\n", $this->mail->getRaw());
+            $bytes = 0;
+            foreach ($lines as $line) {
+                $bytes += strlen("$line\r\n");
+                $socket->send($line);
 
-                return null;
+                if ($bytes >= $this->contentLength) {
+                    break;
+                }
             }
-            if ($bytes >= $this->contentLength) {
-                break;
-            }
-        }
 
-        $currentLine = '';
-        while ($line = @socket_read($socket, 512, PHP_NORMAL_READ)) {
-            if (preg_match('/^\s+[a-z]+/i', $line)) {
-                $currentLine .= ' ' . trim($line);
-
-                continue;
-            }
-            $line = trim($line);
-            if (preg_match('/^Spam:\s+(?:False|True)\s+;\s+(\d+)\s+\/\s+\d+/i', $line, $matches)) {
-                $this->results['total_score'] = $matches[1];
-
-                continue;
-            }
-            if (preg_match('/^[a-z\-]+: /i', $line)) {
-                $regex = '/^X-Spam-Status: ' .
-                    '(?:(?:Yes|No), score=[0-9\.\-]+ required=[0-9\.\-]+ )?' .
-                    'tests=(.*) autolearn=(yes|no)(?: autolearn_force=(yes|no))?' .
-                    ' version=([0-9\.]+)$/';
-                if (preg_match($regex, $currentLine, $matches)) {
-                    [, $tests, $autolearn, $autolearn_force, $version] = $matches;
-                    $tests = array_map(function ($test) {
-                        $test = trim($test);
-                        $score = 'undef';
-                        if (strpos($test, '=') !== false) {
-                            [$test, $score] = explode('=', $test);
-                        }
-
-                        return ['name' => $test, 'score' => (float) $score];
-                    }, explode(',', $tests));
-                    $this->results['tests'] = $tests;
-                    $this->results['autolearn'] = strtolower($autolearn) === 'yes';
-                    $this->results['autolearn_force'] = strtolower($autolearn_force) === 'yes';
-                    $this->results['version'] = $version;
+            $currentLine = '';
+            while ($line = $socket->read(4096)) {
+                if (preg_match('/^\s+[a-z]+/i', $line)) {
+                    $currentLine .= ' ' . trim($line);
 
                     continue;
                 }
-                $currentLine = $line;
-            }
-        }
+                $line = trim($line);
+                if (preg_match('/^[a-z\-]+: /i', $line)) {
+                    $regex = '/^X-Spam-Status: ' .
+                        '(?:(?:Yes|No), score=[0-9\.\-]+ required=[0-9\.\-]+ )?' .
+                        'tests=(.*) autolearn=(yes|no)(?: autolearn_force=(yes|no))?' .
+                        ' version=([0-9\.]+)$/';
+                    if (preg_match($regex, $currentLine, $matches)) {
+                        [, $tests, $autolearn, $autolearn_force, $version] = $matches;
+                        $tests = array_map(function ($test) {
+                            $test = trim($test);
+                            $score = 'undef';
+                            if (strpos($test, '=') !== false) {
+                                [$test, $score] = explode('=', $test);
+                                $this->results['total_score'] += floatval($score);
+                            }
 
-        socket_close($socket);
+                            return ['name' => $test, 'score' => (float) $score];
+                        }, explode(',', $tests));
+                        $this->results['tests'] = $tests;
+                        $this->results['autolearn'] = strtolower($autolearn) === 'yes';
+                        $this->results['autolearn_force'] = strtolower($autolearn_force) === 'yes';
+                        $this->results['version'] = $version;
+
+                        break;
+                    }
+                    $currentLine = $line;
+                }
+            }
+
+            $socket->close();
+        } catch (SocketException $e) {
+            $this->error = $e->getMessage();
+
+            return null;
+        }
 
         $this->mail->timings['spamassassin'] = microtime(true) - $timeBegin;
 
         return $this;
-    }
-
-    /**
-     * Write to a socket cleanly.
-     *
-     * @param resource|bool $socket
-     * @param string        $in
-     *
-     * @return bool
-     */
-    private function socketWrite($socket, string $in): bool
-    {
-        if (!$socket) {
-            return false;
-        }
-        $le = "\r\n";
-
-        /* Send request */
-        $sent = socket_write($socket, "{$in}{$le}");
-        if ($sent != strlen("{$in}{$le}")) {
-            return false;
-        }
-
-        return true;
     }
 }

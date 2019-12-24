@@ -62,44 +62,4 @@ abstract class Scanner implements ScannerContract
     {
         return $this->results;
     }
-
-    /**
-     * Break a DSN (ex. ipv4://127.0.0.1:10024) into the parts.
-     *
-     * @param string $dsn
-     * @return array [$path, $port, $proto, $type]
-     */
-    protected function breakDsn(string $dsn): array
-    {
-        [$type, $path] = explode('://', $dsn, 2);
-        if (! isset($path) || empty($path) || ! isset($type) || empty($type)) {
-            $this->error = "Invalid socket: {$type}{$path}.";
-
-            return null;
-        }
-
-        $type = strtolower($type);
-        if ($type === 'ipv4') {
-            $type = AF_INET;
-        } elseif ($type === 'ipv6') {
-            $type = AF_INET6;
-        } elseif ($type === 'unix') {
-            $type = AF_UNIX;
-        } else {
-            $type = null;
-        }
-
-        $proto = SOL_TCP;
-        if ($type == AF_INET6) {
-            [$path, $port] = explode(']:', $path, 2);
-            $path = trim($path, '[]');
-        } elseif ($type == AF_INET) {
-            [$path, $port] = explode(':', $path, 2);
-        } else {
-            $port = 0;
-            $proto = 0;
-        }
-
-        return [$path, $port, $proto, $type];
-    }
 }

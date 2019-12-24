@@ -5,18 +5,20 @@ namespace Elephant\Filtering\Scanners;
 use Elephant\Filtering\Scanners\Scanner;
 use Elephant\Contracts\Mail\Scanner as ScannerContract;
 use Elephant\Contracts\Mail\Mail;
+use Elephant\Foundation\Exceptions\SocketException;
+use Elephant\Foundation\Socket;
 
 class ClamAV extends Scanner
 {
-    const BYTES_WRITE = 512;
+    const BYTES_RW = 512;
 
     const FOUND_REGEX = '/^(.*):\s+(?!Infected Archive)(.*)\s+FOUND$/';
     const ERROR_REGEX = '/^(.*):\s+(.*)\s+ERROR$/';
 
-    /** @var \Illuminate\Filesystem\FilesystemManager $filesystem */
+    /** @var \Illuminate\Filesystem\FileSystem $filesystem */
     private $filesystem;
 
-    /** @var resource|bool $socket */
+    /** @var Socket $socket */
     private $socket;
 
     /** @var array $dsnData */
@@ -27,7 +29,7 @@ class ClamAV extends Scanner
     {
         parent::__construct($mail);
 
-        $this->filesystem = app('filesystem');
+        $this->filesystem = app('filesystem')->disk('tmp');
 
         $this->results = [
             'infected' => false,
@@ -35,10 +37,6 @@ class ClamAV extends Scanner
             'viruses' => [],
             'errors' => [],
         ];
-
-        $this->socket = false;
-
-        $this->dsnData = $this->breakDsn(config('scanners.clamav.socket'));
     }
 
     /** {@inheritdoc} */
@@ -46,7 +44,7 @@ class ClamAV extends Scanner
     {
         $timeBegin = microtime(true);
 
-        $this->connect();
+        $this->socket = new Socket(config('scanners.clamav.socket'));
 
         $scanOnDisk = config('scanners.clamav.on_disk', false);
 
@@ -82,7 +80,7 @@ class ClamAV extends Scanner
             if ($maxEmailSize != 0) {
                 $emailContents = substr($emailContents, 0, $maxEmailSize);
             }
-            $this->filesystem->disk('tmp')->put("clamav/{$queueId}/full-email.eml", $emailContents);
+            $this->filesystem->put("clamav/{$queueId}/full-email.eml", $emailContents);
         }
         $maxSize = config('scanners.clamav.max_size', 64 * 1000); // 64 Kb
 
@@ -99,7 +97,7 @@ class ClamAV extends Scanner
             if ($bodyPart->size > $maxSize) {
                 break;
             }
-            $this->filesystem->disk('tmp')->put("clamav/{$queueId}/{$name}", $bodyPart->getBody());
+            $this->filesystem->put("clamav/{$queueId}/{$name}", $bodyPart->getBody());
         }
 
         return "clamav/{$queueId}/";
@@ -113,9 +111,9 @@ class ClamAV extends Scanner
     private function multiscan(): bool
     {
         $lpath = $this->genFiles();
-        $fpath = $this->filesystem->disk('tmp')->path($lpath);
+        $fpath = $this->filesystem->path($lpath);
 
-        if (! $this->socketWrite("MULTISCAN {$fpath}")) {
+        if (! $this->sendCommand("MULTISCAN {$fpath}")) {
             $this->error = 'Unable to write to socket!';
             if (config('app.debug', false)) {
                 $this->error .= ' ' . socket_strerror(socket_last_error($this->socket));
@@ -124,7 +122,7 @@ class ClamAV extends Scanner
 
         $this->read();
 
-        return $this->filesystem->disk('tmp')->deleteDirectory($lpath);
+        return $this->filesystem->deleteDirectory($lpath);
     }
 
     /**
@@ -171,9 +169,7 @@ class ClamAV extends Scanner
     {
         debug("clamav: sending $filename");
         if (! isset($this->socket) || ! is_resource($this->socket)) {
-            if (! $this->connect()) {
-                return false;
-            }
+            $this->socket = new Socket(config('scanners.clamav.socket'));
         }
 
         if (! $this->sendCommand("INSTREAM")) {
@@ -186,8 +182,8 @@ class ClamAV extends Scanner
         }
         $left = $body;
         while (strlen($left) > 0) {
-            $chunk = substr($left, 0, self::BYTES_WRITE);
-            $left = substr($left, self::BYTES_WRITE);
+            $chunk = substr($left, 0, self::BYTES_RW);
+            $left = substr($left, self::BYTES_RW);
             if (! $this->sendChunk($chunk)) {
                 return false;
             }
@@ -214,8 +210,7 @@ class ClamAV extends Scanner
      */
     private function read(string $fileName = ''): bool
     {
-        while ($line = @socket_read($this->socket, 512, PHP_NORMAL_READ)) {
-            $line = rtrim($line);
+        while ($line = $this->socket->read(self::BYTES_RW)) {
             if (! empty($fileName)) {
                 $line = preg_replace('/.*:/', "$fileName:", $line, 1);
             }
@@ -235,73 +230,34 @@ class ClamAV extends Scanner
                 $this->results['error'] = true;
             }
         }
-        unset($this->socket);
+        $this->socket->close();
 
         return true;
     }
 
     private function sendChunk($chunk)
     {
-        $size = pack('N', strlen($chunk));
-        // size packet
-        if (! socket_send($this->socket, $size, strlen($size), 0)) {
-            $this->error = "Cannot send size for chunk.";
+        try {
+            $size = pack('N', strlen($chunk));
 
-            return false;
-        }
-        // data packet
-        if (! socket_send($this->socket, $chunk, strlen($chunk), 0)) {
-            $this->error = "Cannot send chunk.";
+            $this->socket->send($size);
+            $this->socket->send($chunk);
+        } catch (SocketException $e) {
+            $this->error = $e->getMessage();
 
             return false;
         }
 
         return true;
-    }
-
-    private function send($val)
-    {
-        return socket_send($this->socket, $val, strlen($val), 0);
     }
 
     private function sendCommand($command)
     {
-        return $this->send("n{$command}\n");
+        return $this->socket->send("n{$command}\n");
     }
 
     private function endStream()
     {
-        return $this->send(pack('N', 0));
-    }
-
-    private function connect()
-    {
-        [$path, $port, $proto, $type] = $this->dsnData;
-
-        if (is_null($type)) {
-            $this->error = "Invalid socket type: $type";
-
-            return false;
-        }
-
-        $this->socket = socket_create($type, SOCK_STREAM, $proto);
-        if (! $this->socket) {
-            $this->error = 'Unable to create socket!';
-            if (config('app.debug', false)) {
-                $this->error .= ' ' . socket_strerror(socket_last_error($this->socket));
-            }
-
-            return false;
-        }
-        if (! @socket_connect($this->socket, $path, $port)) {
-            $this->error = 'Unable to connect to socket!';
-            if (config('app.debug', false)) {
-                $this->error .= ' ' . socket_strerror(socket_last_error($this->socket));
-            }
-
-            return false;
-        }
-
-        return true;
+        return $this->socket->send(pack('N', 0));
     }
 }
