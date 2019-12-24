@@ -3,7 +3,7 @@
 namespace Elephant\EventLoop\Mail;
 
 use Illuminate\Support\Str;
-use Elepahnt\Mail\Transport;
+use Elephant\Mail\Transport;
 use Elephant\Contracts\Mail\Mail;
 use Illuminate\Pipeline\Pipeline;
 use Elephant\Mail\Jobs\QueueProcessJob;
@@ -165,11 +165,13 @@ class EventLoopData
         }
 
         $this->handleWrapper(function () {
-            $this->mail = (new Pipeline($this->app))
-                ->send($this->mail)
-                ->via('filter')
-                ->through($this->filters['connect'] ?? [])
-                ->thenReturn();
+            if ($this->mail->getFinalDestination() !== 'allow') {
+                $this->mail = (new Pipeline($this->app))
+                    ->send($this->mail)
+                    ->via('filter')
+                    ->through($this->filters['connect'] ?? [])
+                    ->thenReturn();
+            }
             $this->say('220 '.$this->app->config['relay.greeting_banner'] ?? 'Welcome to ElephantMFA ESMTP');
         });
 
@@ -275,11 +277,13 @@ class EventLoopData
         $helo_parts = explode(' ', $helo, 2);
         $this->mail->setHelo($helo_parts[1] ?? '');
         $this->handleWrapper(function () use ($helo) {
-            $this->mail = (new Pipeline($this->app))
-                ->send($this->mail)
-                ->via('filter')
-                ->through($this->filters['helo'] ?? [])
-                ->thenReturn();
+            if ($this->mail->getFinalDestination() !== 'allow') {
+                $this->mail = (new Pipeline($this->app))
+                    ->send($this->mail)
+                    ->via('filter')
+                    ->through($this->filters['helo'] ?? [])
+                    ->thenReturn();
+            }
             if (Str::startsWith(strtolower($helo), 'helo')) {
                 $this->say('250 '.config('app.name', 'ElephantMFA ESMTP'));
             } else {
@@ -319,11 +323,13 @@ class EventLoopData
         $from_parts = explode(': ', $envelope_from, 2);
         $this->mail->setSender($from_parts[1] ?? '');
         $this->handleWrapper(function () {
-            $this->mail = (new Pipeline($this->app))
-                ->send($this->mail)
-                ->via('filter')
-                ->through($this->filters['mail_from'] ?? [])
-                ->thenReturn();
+            if ($this->mail->getFinalDestination() !== 'allow') {
+                $this->mail = (new Pipeline($this->app))
+                    ->send($this->mail)
+                    ->via('filter')
+                    ->through($this->filters['mail_from'] ?? [])
+                    ->thenReturn();
+            }
             $this->say('250 2.1.0 Ok');
         });
         $this->mail->timings['mail_from'] = microtime(true) - $time;
@@ -354,11 +360,13 @@ class EventLoopData
         $to_parts = explode(': ', $envelope_to, 2);
         $this->mail->addRecipient($to_parts[1] ?? '');
         $this->handleWrapper(function () {
-            $this->mail = (new Pipeline($this->app))
-                ->send($this->mail)
-                ->via('filter')
-                ->through($this->filters['rcpt_to'] ?? [])
-                ->thenReturn();
+            if ($this->mail->getFinalDestination() !== 'allow') {
+                $this->mail = (new Pipeline($this->app))
+                    ->send($this->mail)
+                    ->via('filter')
+                    ->through($this->filters['rcpt_to'] ?? [])
+                    ->thenReturn();
+            }
             $this->say('250 2.1.5 Ok');
         });
         $this->mail->timings['rcpt_to'] = microtime(true) - $time;
@@ -408,14 +416,16 @@ class EventLoopData
         $returnOk = false;
         if (in_array(['proto', 'addr', 'name'], $attrs)) {
             $this->handleWrapper(function () use (&$returnOk) {
-                $this->mail = (new Pipeline($this->app))
-                    ->send($this->mail)
-                    ->via('filter')
-                    ->through($this->filters['connection'] ?? [])
-                    ->thenReturn();
+                if ($this->mail->getFinalDestination() !== 'allow') {
+                    $this->mail = (new Pipeline($this->app))
+                        ->send($this->mail)
+                        ->via('filter')
+                        ->through($this->filters['connection'] ?? [])
+                        ->thenReturn();
+                }
                 $returnOk = true;
             });
-            if (!$returnOk) {
+            if (! $returnOk) {
                 $this->mail->timings['xforward'] = microtime(true) - $time;
 
                 return;
@@ -423,11 +433,13 @@ class EventLoopData
         }
         if (in_array('helo', $attrs)) {
             $this->handleWrapper(function () use (&$returnOk) {
-                $this->mail = (new Pipeline($this->app))
-                    ->send($this->mail)
-                    ->via('filter')
-                    ->through($this->filters['helo'] ?? [])
-                    ->thenReturn();
+                if ($this->mail->getFinalDestination() !== 'allow') {
+                    $this->mail = (new Pipeline($this->app))
+                        ->send($this->mail)
+                        ->via('filter')
+                        ->through($this->filters['helo'] ?? [])
+                        ->thenReturn();
+                }
                 $returnOk = true;
             });
         }
@@ -459,11 +471,13 @@ class EventLoopData
         $this->endingMail = false;
         $this->currentLine = '';
         $this->handleWrapper(function () {
-            $this->mail = (new Pipeline($this->app))
-                ->send($this->mail)
-                ->via('filter')
-                ->through($this->filters['data'] ?? [])
-                ->thenReturn();
+            if ($this->mail->getFinalDestination() !== 'allow') {
+                $this->mail = (new Pipeline($this->app))
+                    ->send($this->mail)
+                    ->via('filter')
+                    ->through($this->filters['data'] ?? [])
+                    ->thenReturn();
+            }
             $queueId = $this->generateQueueId();
             $this->say("250 2.0.0 Ok: queued as $queueId");
         });
