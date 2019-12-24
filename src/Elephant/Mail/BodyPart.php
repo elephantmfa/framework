@@ -88,9 +88,9 @@ class BodyPart implements Arrayable
     /**
      * Get the body of the BodyPart.
      *
-     * @return void
+     * @return string
      */
-    public function getBody()
+    public function getBody(): string
     {
         if ($this->contentTransferEncoding == 'base64') {
             return base64_decode(preg_replace('/\r?\n?/', '', $this->body));
