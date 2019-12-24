@@ -216,6 +216,13 @@ interface Mail
     public function getSenderName(): string;
 
     /**
+     * Get the connection data.
+     *
+     * @return \Elephant\Mail\Connection
+     */
+    public function getConnection(): \Elephant\Mail\Connection;
+
+    /**
      * Get the protocol of the message.
      *
      * @return string
