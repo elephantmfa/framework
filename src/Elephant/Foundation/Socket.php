@@ -68,13 +68,15 @@ class Socket
      * Read from socket.
      *
      * @param int $bytesToRead Default: 8192
+     * @param int $readType Default: PHP_NORMAL_READ
+     *  Alternative: PHP_BINARY_READ
      * @return string
      *
      * @throws SocketException Unable to read from socket.
      */
-    public function read(int $bytesToRead = 8192): string
+    public function read(int $bytesToRead = 8192, int $readType = PHP_NORMAL_READ): string
     {
-        $ret = @socket_read($this->socket, $bytesToRead, PHP_NORMAL_READ);
+        $ret = @socket_read($this->socket, $bytesToRead, $readType);
 
         if ($ret === false) {
             throw new SocketException("Unable to read from socket.");
