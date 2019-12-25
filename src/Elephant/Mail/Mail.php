@@ -367,7 +367,7 @@ class Mail implements MailContract, Jsonable, Arrayable
      */
     public function getSenderIp(): string
     {
-        return $this->connection->senderIp;
+        return $this->connection->senderIp ?? '0.0.0.0';
     }
 
     /**
@@ -375,7 +375,7 @@ class Mail implements MailContract, Jsonable, Arrayable
      */
     public function getSenderName(): string
     {
-        return $this->connection->senderName;
+        return $this->connection->senderName ?? 'UNKNOWN';
     }
 
     /**
@@ -383,7 +383,7 @@ class Mail implements MailContract, Jsonable, Arrayable
      */
     public function getProtocol(): string
     {
-        return $this->connection->protocol;
+        return $this->connection->protocol ?? 'SMTP';
     }
 
     /**
@@ -514,10 +514,10 @@ class Mail implements MailContract, Jsonable, Arrayable
             }
 
             if (preg_match('/^\s+\S/', $data)) {
-                if (! config('relay.unfold_headers')) {
-                    $this->currentLine .= "\n".trim($data, "\r\n");
-                } else {
+                if (config('relay.unfold_headers', true)) {
                     $this->currentLine .= ' '.trim($data);
+                } else {
+                    $this->currentLine .= "\n".trim($data, "\r\n");
                 }
             } else {
                 if (! empty($this->currentLine)) {
