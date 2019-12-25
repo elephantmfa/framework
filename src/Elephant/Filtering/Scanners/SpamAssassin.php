@@ -5,8 +5,8 @@ namespace Elephant\Filtering\Scanners;
 use Elephant\Contracts\Mail\Mail;
 use Elephant\Filtering\Scanners\Scanner;
 use Elephant\Contracts\Mail\Scanner as ScannerContract;
-use Elephant\Foundation\Exceptions\SocketException;
-use Elephant\Foundation\Socket;
+use Elephant\Helpers\Exceptions\SocketException;
+use Elephant\Helpers\Socket;
 
 class SpamAssassin extends Scanner
 {

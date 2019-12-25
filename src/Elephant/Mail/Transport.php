@@ -3,7 +3,7 @@
 namespace Elephant\Mail;
 
 use Elephant\Contracts\Mail\Mail;
-use Elephant\Foundation\Socket;
+use Elephant\Helpers\Socket;
 use Elephant\Mail\Exceptions\TransportException;
 
 class Transport
