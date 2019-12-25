@@ -51,6 +51,8 @@ abstract class Scanner implements ScannerContract
     /** {@inheritdoc} */
     public function setUser(string $email): ScannerContract
     {
+        $this->user = $email;
+
         return $this;
     }
 
