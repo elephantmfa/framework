@@ -6,8 +6,8 @@ use Elephant\Helpers\Exceptions\SocketException;
 
 class Socket
 {
-    /** @var resource $socket */
-    protected $socket;
+    /** @var resource|null $socket */
+    protected $socket = null;
 
     /** @var array $dsnData */
     protected $dsnData = [];
@@ -17,10 +17,27 @@ class Socket
      * @uses self::connect()
      * @uses self::breakDsn
      */
-    public function __construct(string $dsn)
+    public function __construct(string $dsn = '')
     {
-        $this->dsnData = self::breakDsn($dsn);
-        $this->connect();
+        if (! empty($dsn)) {
+            $this->dsnData = self::breakDsn($dsn);
+            $this->connect();
+        }
+    }
+    /**
+     * Set the DSN and connect. only works if not already connected.
+     *
+     * @param string $dsn ex. ipv4://127.0.0.1:10024 or unix://path/to/socket.sock
+     * @return self
+     */
+    public function setDsn(string $dsn): self
+    {
+        if (empty($this->dsnData)) {
+            $this->dsnData = self::breakDsn($dsn);
+            $this->connect();
+        }
+
+        return $this;
     }
 
     public function __destruct()
@@ -115,6 +132,11 @@ class Socket
     public function close(): void
     {
         $this->__destruct();
+    }
+
+    public function getLastError(): string
+    {
+        return socket_strerror(socket_last_error($this->socket));
     }
 
     /**
