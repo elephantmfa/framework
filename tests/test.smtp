@@ -1,3 +1,7 @@
+HELO me.com
+MAIL FROM: <from@test.com>
+RCPT TO: <to@test.com>
+DATA
 Received: from sender.test.com (sender.test.com [192.168.1.1])
 	by recipient.test.com (Postfix) with ESMTPS id F13AF2120DD
 	for <to@test.com>; Fri, 15 Nov 2019 14:50:41 +0000 (GMT)
@@ -11,11 +15,11 @@ Content-Type: multipart/mixed;
 --=1234567890abcdef=
 Content-Transfer-Encoding: 8bit
 Content-Type: text/plain; charset=UTF-8;
-	format=flowed
+ format=flowed
 
 Test
 .
-test2
+Test2
 
 --=1234567890abcdef=
 Content-Transfer-Encoding: base64
