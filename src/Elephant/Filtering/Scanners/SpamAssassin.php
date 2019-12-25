@@ -19,17 +19,10 @@ class SpamAssassin extends Scanner
 
     /**
      * Construct a new SpamAssassin Scanner instance.
-     *
-     * @param Mail $mail The mail to be scanned.
      */
-    public function __construct(Mail $mail)
+    public function __construct()
     {
-        parent::__construct($mail);
-        $this->contentLength = strlen(str_replace("\n", "\r\n", $mail->getRaw()));
-        $maxSize = config('scanners.spamassassin.max_size', 0);
-        if ($maxSize > 0 && $this->contentLength > $maxSize) {
-            $this->contentLength = $maxSize;
-        }
+        parent::__construct();
         $this->results = [
             'total_score' => 0,
             'tests' => [],
@@ -40,8 +33,15 @@ class SpamAssassin extends Scanner
     }
 
     /** {@inheritdoc} */
-    public function scan(): ?ScannerContract
+    public function scan(Mail $mail): ?ScannerContract
     {
+        $this->mail = $mail;
+        $this->contentLength = strlen(str_replace("\n", "\r\n", $mail->getRaw()));
+        $maxSize = config('scanners.spamassassin.max_size', 0);
+        if ($maxSize > 0 && $this->contentLength > $maxSize) {
+            $this->contentLength = $maxSize;
+        }
+        
         $timeBegin = microtime(true);
 
         try {

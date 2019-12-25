@@ -36,13 +36,10 @@ abstract class Scanner implements ScannerContract
     public $error;
 
     /**
-     * Construct a new SpamAssassin Scanner instance.
-     *
-     * @param Mail $mail The mail to be scanned.
+     * Construct a new Scanner instance.
      */
-    public function __construct(Mail $mail)
+    public function __construct()
     {
-        $this->mail = $mail;
         $this->results = [];
         $this->error = '';
         $this->user = '';
@@ -57,7 +54,7 @@ abstract class Scanner implements ScannerContract
     }
 
     /** {@inheritdoc} */
-    abstract public function scan(): ?ScannerContract;
+    abstract public function scan(Mail $mail): ?ScannerContract;
 
     /** {@inheritdoc} */
     public function getResults()

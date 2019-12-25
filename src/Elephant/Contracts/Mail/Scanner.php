@@ -7,9 +7,10 @@ interface Scanner
     /**
      * Scan a mail using the scanner. Returns the scanner if success, null on failure.
      *
+     * @param Mail $mail The mail to be scanned.
      * @return Scanner|null
      */
-    public function scan(): ?self;
+    public function scan(Mail $mail): ?self;
 
     /**
      * Set the user to use when scanning the mail.

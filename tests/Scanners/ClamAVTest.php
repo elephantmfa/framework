@@ -38,8 +38,8 @@ class ClamAVTest extends TestCase
     /** @test */
     function it_returns_null_on_failure_to_connect_to_socket()
     {
-        $clamav = new ClamAV(self::$mail);
-        $this->assertNull($clamav->scan());
+        $clamav = app(ClamAV::class);
+        $this->assertNull($clamav->scan(self::$mail));
     }
 
     /** @test */
@@ -59,9 +59,9 @@ class ClamAVTest extends TestCase
             $mock->shouldReceive('close')->times(3);
         }));
 
-        $clamav = new ClamAV(self::$mail);
+        $clamav = app(ClamAV::class);
 
-        $this->assertSame($clamav, $clamav->scan());
+        $this->assertSame($clamav, $clamav->scan(self::$mail));
         $this->assertSame([
             'infected' => true,
             'error' => false,

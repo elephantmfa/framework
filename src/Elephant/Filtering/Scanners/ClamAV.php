@@ -22,9 +22,9 @@ class ClamAV extends Scanner
     private $socket;
 
     /** {@inheritDoc} */
-    public function __construct(Mail $mail)
+    public function __construct()
     {
-        parent::__construct($mail);
+        parent::__construct();
 
         $this->filesystem = app('filesystem')->disk('tmp');
 
@@ -37,8 +37,10 @@ class ClamAV extends Scanner
     }
 
     /** {@inheritdoc} */
-    public function scan(): ?ScannerContract
+    public function scan(Mail $mail): ?ScannerContract
     {
+        $this->mail = $mail;
+
         $timeBegin = microtime(true);
 
         if (! $this->reconnect()) {

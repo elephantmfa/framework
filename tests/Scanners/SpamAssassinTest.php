@@ -38,8 +38,8 @@ class SpamAssassinTest extends TestCase
     /** @test */
     function it_returns_null_on_failure_to_connect_to_socket()
     {
-        $sa = new SpamAssassin(self::$mail);
-        $this->assertNull($sa->scan());
+        $sa = app(SpamAssassin::class);
+        $this->assertNull($sa->scan(self::$mail));
     }
 
     /** @test */
@@ -56,9 +56,9 @@ class SpamAssassinTest extends TestCase
             $mock->shouldReceive('close')->once();
         }));
 
-        $sa = new SpamAssassin(self::$mail);
+        $sa = app(SpamAssassin::class);
 
-        $this->assertSame($sa, $sa->scan());
+        $this->assertSame($sa, $sa->scan(self::$mail));
         $this->assertSame([
             'total_score' => (float) 1001,
             'tests' => [
