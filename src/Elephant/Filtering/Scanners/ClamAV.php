@@ -21,9 +21,6 @@ class ClamAV extends Scanner
     /** @var Socket $socket */
     private $socket;
 
-    /** @var array $dsnData */
-    private $dsnData;
-
     /** {@inheritDoc} */
     public function __construct(Mail $mail)
     {
@@ -44,7 +41,9 @@ class ClamAV extends Scanner
     {
         $timeBegin = microtime(true);
 
-        $this->socket = new Socket(config('scanners.clamav.socket'));
+        if (! $this->reconnect()) {
+            return null;
+        }
 
         $scanOnDisk = config('scanners.clamav.on_disk', false);
 
@@ -116,7 +115,7 @@ class ClamAV extends Scanner
         if (! $this->sendCommand("MULTISCAN {$fpath}")) {
             $this->error = 'Unable to write to socket!';
             if (config('app.debug', false)) {
-                $this->error .= ' ' . socket_strerror(socket_last_error($this->socket));
+                $this->error .= ' ' . $this->socket->getLastError();
             }
         }
 
@@ -168,14 +167,12 @@ class ClamAV extends Scanner
     private function instreamSend(string $body, string $filename)
     {
         debug("clamav: sending $filename");
-        if (! isset($this->socket) || ! is_resource($this->socket)) {
-            $this->socket = new Socket(config('scanners.clamav.socket'));
-        }
+        $this->reconnect();
 
         if (! $this->sendCommand("INSTREAM")) {
             $this->error = 'Unable to write to socket!';
             if (config('app.debug', false)) {
-                $this->error .= ' ' . socket_strerror(socket_last_error($this->socket));
+                $this->error .= ' ' . $this->socket->getLastError();
             }
 
             return false;
@@ -191,6 +188,7 @@ class ClamAV extends Scanner
 
         if (! $this->endStream()) {
             $this->error = "Unable to end stream.";
+
             return false;
         }
 
@@ -204,18 +202,18 @@ class ClamAV extends Scanner
     /**
      * Reads from socket.
      *
-     * @param string $fileName = ''
+     * @param string $fileName = ""
      *
      * @return bool
      */
     private function read(string $fileName = ''): bool
     {
-        while ($line = $this->socket->read(self::BYTES_RW)) {
+        while (! empty($line = $this->socket->read(self::BYTES_RW))) {
             if (! empty($fileName)) {
                 $line = preg_replace('/.*:/', "$fileName:", $line, 1);
             }
 
-            debug("clamav: response: $line");
+            debug("clamav: response: <$line>");
 
             if (preg_match(self::FOUND_REGEX, $line, $matches)) {
                 [,$fname, $vname] = $matches;
@@ -235,7 +233,7 @@ class ClamAV extends Scanner
         return true;
     }
 
-    private function sendChunk($chunk)
+    private function sendChunk(string $chunk): bool
     {
         try {
             $size = pack('N', strlen($chunk));
@@ -251,13 +249,28 @@ class ClamAV extends Scanner
         return true;
     }
 
-    private function sendCommand($command)
+    private function sendCommand($command): bool
     {
-        return $this->socket->send("n{$command}\n");
+        return $this->socket->send("n{$command}\n") > 0;
     }
 
-    private function endStream()
+    private function endStream(): bool
     {
-        return $this->socket->send(pack('N', 0));
+        return $this->socket->send(pack('N', 0)) > 0;
+    }
+
+    private function reconnect(): bool
+    {
+        if (! isset($this->socket) || ! ($this->socket instanceof Socket)) {
+            try {
+                $this->socket = app(Socket::class)->setDsn(config('scanners.clamav.socket', 'ipv4://127.0.0.1:3310'));
+            } catch (SocketException $e) {
+                unset($this->socket);
+
+                return false;
+            }
+        }
+
+        return true;
     }
 }
