@@ -45,7 +45,7 @@ class SpamAssassin extends Scanner
         $timeBegin = microtime(true);
 
         try {
-            $socket = new Socket(config('scanners.spamassassin.socket'));
+            $socket = app(Socket::class)->setDsn(config('scanners.spamassassin.socket', 'ipv4://127.0.0.1:783'));
             $socket->setOption(['sec' => config('scanners.spamassassin.timeout', 10), 'usec' => 0]);
 
             $socket->send('HEADERS SPAMC/1.2');
