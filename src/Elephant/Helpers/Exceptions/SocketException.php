@@ -1,6 +1,6 @@
 <?php
 
-namespace Elephant\Foundation\Exceptions;
+namespace Elephant\Helpers\Exceptions;
 
 use Exception;
 

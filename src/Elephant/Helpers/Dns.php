@@ -1,8 +1,8 @@
 <?php
 
-namespace Elephant\Foundation;
+namespace Elephant\Helpers;
 
-use React\Eventloop\Factory as Loop;
+use React\EventLoop\Factory as Loop;
 use React\Dns\RecordNotFoundException;
 use React\Dns\Resolver\Factory as Resolver;
 

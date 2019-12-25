@@ -1,8 +1,8 @@
 <?php
 
-namespace Elephant\Foundation;
+namespace Elephant\Helpers;
 
-use Elephant\Foundation\Exceptions\SocketException;
+use Elephant\Helpers\Exceptions\SocketException;
 
 class Socket
 {
