@@ -3,14 +3,17 @@
 namespace Elephant\Foundation\Exceptions;
 
 use Exception;
-use Illuminate\Contracts\Container\Container;
-use Illuminate\Contracts\Debug\ExceptionHandler as ExceptionHandlerContract;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Throwable;
 use Illuminate\Support\Arr;
 use Psr\Log\LoggerInterface;
+use React\Socket\ConnectionInterface;
+use Elephant\Contracts\MailExceptionHandler;
+use Illuminate\Contracts\Container\Container;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Symfony\Component\Console\Application as ConsoleApplication;
+use Illuminate\Contracts\Debug\ExceptionHandler as ExceptionHandlerContract;
 
-class Handler implements ExceptionHandlerContract
+class Handler implements ExceptionHandlerContract, MailExceptionHandler
 {
     /**
      * The container implementation.
@@ -33,7 +36,6 @@ class Handler implements ExceptionHandlerContract
      */
     protected $internalDontReport = [
         ModelNotFoundException::class,
-        SuspiciousOperationException::class,
     ];
 
     /**
@@ -90,20 +92,29 @@ class Handler implements ExceptionHandlerContract
     /**
      * Render an exception into an HTTP response.
      *
-     * @param \React\Socket\ConnectionInterface $connection
-     * @param \Exception                        $e
-     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \Exception  $e
      * @return \Symfony\Component\HttpFoundation\Response
      */
     public function render($connection, Exception $e)
     {
-        $connection->write($e->getMessage()."\r\n");
     }
 
     /** {@inheritdoc} */
     public function renderForConsole($output, Exception $e)
     {
-        echo $e->getMessage()."\r\n";
-        // (new ConsoleApplication)->renderException($e, $output);
+        (new ConsoleApplication)->renderException($e, $output);
+    }
+
+    /**
+     * Render an exception to the console.
+     *
+     * @param \React\Socket\ConnectionInterface $connection
+     * @param \Throwable                        $e
+     * @return void
+     */
+    public function renderForMail(ConnectionInterface $connection, Throwable $e): void
+    {
+        $connection->write($e->getMessage()."\r\n");
     }
 }
