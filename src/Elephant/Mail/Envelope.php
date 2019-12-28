@@ -5,6 +5,11 @@ namespace Elephant\Mail;
 use Illuminate\Contracts\Support\Arrayable;
 use InvalidArgumentException;
 
+/**
+ * @property string        $helo
+ * @property string        $sender
+ * @property array<string> $recipients
+ */
 class Envelope implements Arrayable
 {
     protected $helo;

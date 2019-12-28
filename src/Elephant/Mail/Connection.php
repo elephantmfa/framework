@@ -5,6 +5,12 @@ namespace Elephant\Mail;
 use Illuminate\Contracts\Support\Arrayable;
 use InvalidArgumentException;
 
+/**
+ * @property int    $receivedPort
+ * @property string $protocol SMTP or ESMTP
+ * @property string $senderIp
+ * @property string $senderName The reverse DNS record of senderIp
+ */
 class Connection implements Arrayable
 {
     protected $receivedPort;

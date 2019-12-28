@@ -2,11 +2,20 @@
 
 namespace Elephant\Mail;
 
+use Countable;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 
-class BodyPart implements Arrayable
+/**
+ * @property-read string $filename
+ * @property-read string $disposition Should be either "attachment" or "body"
+ * @property-read int    $size In Bytes
+ * @property-read string $contentTransferEncoding
+ * @property-read string $contentType
+ * @method string __toString()
+ */
+class BodyPart implements Arrayable, Countable
 {
     protected $raw;
 
@@ -170,5 +179,11 @@ class BodyPart implements Arrayable
                 }
             }
         }
+    }
+
+    /** {@inheritDoc} */
+    public function count()
+    {
+        return $this->size;
     }
 }
