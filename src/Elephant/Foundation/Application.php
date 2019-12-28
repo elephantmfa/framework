@@ -3,18 +3,20 @@
 namespace Elephant\Foundation;
 
 use Closure;
-use Elephant\EventLoop\EventLoopServiceProvider;
+use Elephant\Contracts\Mail\Kernel;
+use RuntimeException;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Env;
+use Illuminate\Support\Str;
+use Illuminate\Support\Collection;
 use Illuminate\Container\Container;
-use Illuminate\Contracts\Foundation\Application as ApplicationContract;
-use Illuminate\Events\EventServiceProvider;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Log\LogServiceProvider;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Env;
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Str;
-use RuntimeException;
+use Illuminate\Events\EventServiceProvider;
+use Elephant\EventLoop\EventLoopServiceProvider;
+use Elephant\Foundation\Bootstrap\LoadEnvironmentVariables;
+use Illuminate\Contracts\Foundation\Application as ApplicationContract;
 
 class Application extends Container implements ApplicationContract
 {
@@ -765,7 +767,7 @@ class Application extends Container implements ApplicationContract
      */
     public function handle()
     {
-        return $this[MailKernelContract::class]->handle();
+        return $this[Kernel::class]->handle();
     }
 
     /**
