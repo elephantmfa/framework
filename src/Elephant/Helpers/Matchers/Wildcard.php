@@ -2,10 +2,10 @@
 
 namespace Elephant\Helpers\Matchers;
 
-class Glob extends Regex
+class Wildcard extends Regex
 {
     /**
-     * Construct a new Glob pattern
+     * Construct a new Wildcard pattern
      *
      * @param string $pattern Has the following options:
      *  - `*`: 0 or more of any character.
