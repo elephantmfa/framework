@@ -11,7 +11,7 @@ class Kernel implements KernelContract
     /**
      * The application implementation.
      *
-     * @var \Illuminate\Contracts\Foundation\Application
+     * @var \Illuminate\Contracts\Foundation\Application|\Elephant\Foundation\Application
      */
     protected $app;
 
@@ -96,7 +96,6 @@ class Kernel implements KernelContract
     public function __construct(Application $app)
     {
         $this->app = $app;
-        $this->pid = getmypid();
     }
 
     public function bootstrap()
@@ -115,6 +114,7 @@ class Kernel implements KernelContract
 
     public function handle()
     {
+        $this->app->instance('mailcontext', true);
         $cb = new EventLoopData($this->app, $this->filters);
         $this->app->stdin->on('data', function ($data) use ($cb) {
             $this->app->loop->cancelTimer($this->timeout);

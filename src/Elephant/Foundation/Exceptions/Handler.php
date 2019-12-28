@@ -3,11 +3,11 @@
 namespace Elephant\Foundation\Exceptions;
 
 use Exception;
-use Throwable;
 use Illuminate\Support\Arr;
 use Psr\Log\LoggerInterface;
 use React\Socket\ConnectionInterface;
 use Elephant\Contracts\MailExceptionHandler;
+use Elephant\Helpers\Matchers\Regex;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Symfony\Component\Console\Application as ConsoleApplication;
@@ -84,20 +84,15 @@ class Handler implements ExceptionHandlerContract, MailExceptionHandler
     {
         $dontReport = array_merge($this->dontReport, $this->internalDontReport);
 
-        return !is_null(Arr::first($dontReport, function ($type) use ($e) {
+        return ! is_null(Arr::first($dontReport, function ($type) use ($e) {
             return $e instanceof $type;
         }));
     }
 
-    /**
-     * Render an exception into an HTTP response.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Exception  $e
-     * @return \Symfony\Component\HttpFoundation\Response
-     */
-    public function render($connection, Exception $e)
+    /** {@inheritDoc} */
+    public function render($request, Exception $e)
     {
+        // Not implemented
     }
 
     /** {@inheritdoc} */
@@ -106,15 +101,29 @@ class Handler implements ExceptionHandlerContract, MailExceptionHandler
         (new ConsoleApplication)->renderException($e, $output);
     }
 
-    /**
-     * Render an exception to the console.
-     *
-     * @param \React\Socket\ConnectionInterface $connection
-     * @param \Throwable                        $e
-     * @return void
-     */
-    public function renderForMail(ConnectionInterface $connection, Throwable $e): void
+    /** {@inheritDoc} */
+    public function renderForMail(ConnectionInterface $connection, Exception $e): void
     {
-        $connection->write($e->getMessage()."\r\n");
+        $code = $e->getCode();
+        if ($code < 400 || $code > 599) {
+            $code = config('relay.defer_on_exception', true) ? 450 : 550;
+        }
+
+        $advancedCode = '4.0.0 ';
+        if ($code >= 500) {
+            $advancedCode = '5.0.0 ';
+        }
+
+
+        $response = "{$code} {$advancedCode}Server Configuration Error";
+        if (config('app.debug', false)) {
+            if (Regex::match('/^\d\.\d\.\d\s+/', $e->getMessage())) {
+                $advancedCode = '';
+            }
+
+            $response = "{$code} {$advancedCode}Server Configuration Error: {$e->getMessage()}";
+        }
+
+        $connection->write("$response\r\n");
     }
 }

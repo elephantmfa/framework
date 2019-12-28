@@ -2,7 +2,7 @@
 
 namespace Elephant\Foundation\Bootstrap;
 
-use Elephant\Contracts\Debug\ExceptionHandler;
+use Illuminate\Contracts\Debug\ExceptionHandler;
 use ErrorException;
 use Exception;
 use Illuminate\Contracts\Foundation\Application;
@@ -47,7 +47,7 @@ class HandleExceptions
 
         register_shutdown_function([$this, 'handleShutdown']);
 
-        if (!$app->environment('testing')) {
+        if (! $app->environment('testing')) {
             ini_set('display_errors', 'Off');
         }
     }
@@ -85,7 +85,7 @@ class HandleExceptions
      */
     public function handleException($e)
     {
-        if (!$e instanceof Exception) {
+        if (! $e instanceof Exception) {
             $e = new FatalThrowableError($e);
         }
 
@@ -113,7 +113,13 @@ class HandleExceptions
      */
     protected function renderForConsole(Exception $e)
     {
-        $this->getExceptionHandler()->renderForConsole(new ConsoleOutput(), $e);
+        /** @var \Elephant\Contracts\MailExceptionHandler&\Illuminate\Contracts\Debug\ExceptionHandler $handler */
+        $handler = $this->getExceptionHandler();
+        if (isset($this->app->mailcontext) && $this->app->mailcontext) {
+            $handler->renderForMail($this->app->stdout, $e);
+        } else {
+            $handler->renderForConsole(new ConsoleOutput(), $e);
+        }
     }
 
     /**
@@ -135,7 +141,7 @@ class HandleExceptions
      */
     public function handleShutdown()
     {
-        if (!is_null($error = error_get_last()) && $this->isFatal($error['type'])) {
+        if (! is_null($error = error_get_last()) && $this->isFatal($error['type'])) {
             $this->handleException($this->fatalExceptionFromError($error, 0));
         }
     }
