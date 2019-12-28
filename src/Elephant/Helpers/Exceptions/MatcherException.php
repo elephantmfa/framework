@@ -17,7 +17,7 @@ class MatcherException extends Exception
             $pattern,
             is_iterable($against)
                 ? json_encode($against, JSON_PARTIAL_OUTPUT_ON_ERROR)
-                : $against
+                : "'$against'"
         ), 500);
     }
 }
