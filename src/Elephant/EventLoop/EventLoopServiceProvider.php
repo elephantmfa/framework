@@ -22,18 +22,13 @@ class EventLoopServiceProvider extends ServiceProvider
     public function register()
     {
         $this->app->bind(
-            Elephant\Contracts\EventLoop\ProcessManager::class,
-            Elephant\EventLoop\ProcessManager::class
+            \Elephant\Contracts\EventLoop\ProcessManager::class,
+            \Elephant\EventLoop\ProcessManager::class
         );
 
         $this->app->singleton('loop', function ($app) {
             return Factory::create();
         });
-
-        $this->app->singleton(
-            ProcessManager::class,
-            \Elephant\EventLoop\ProcessManager::class
-        );
 
         $this->app->singleton('stdin', function ($app) {
             return new ReadableResourceStream(STDIN, $app->loop);
