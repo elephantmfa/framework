@@ -13,7 +13,7 @@ class Regex
     protected $flags = 0;
 
     /** @var array<array<string>> $matches */
-    protected static $matches = [];
+    protected $matches = [];
 
     /**
      * Create a new regex matcher.
