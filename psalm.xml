@@ -11,6 +11,8 @@
         <ignoreFiles>
             <directory name="vendor" />
             <directory name="src/Elephant/Testing" />
+            <directory name="src/Elephant/Foundation" />
+            <file name="src/Elephant/Helpers/Dns.php" />
         </ignoreFiles>
     </projectFiles>
 
@@ -31,20 +33,10 @@
         <InternalProperty errorLevel="info" />
         <InternalClass errorLevel="info" />
 
-        <MissingClosureReturnType errorLevel="info" />
-        <MissingReturnType errorLevel="info" />
-        <MissingPropertyType errorLevel="info" />
-        <InvalidDocblock errorLevel="info" />
         <MisplacedRequiredParam errorLevel="info" />
 
         <PropertyNotSetInConstructor errorLevel="info" />
-        <MissingConstructor errorLevel="info" />
-        <MissingClosureParamType errorLevel="info" />
-        <MissingParamType errorLevel="info" />
 
-        <RedundantCondition errorLevel="info" />
-
-        <DocblockTypeContradiction errorLevel="info" />
         <RedundantConditionGivenDocblockType errorLevel="info" />
 
         <UnresolvableInclude errorLevel="info" />
