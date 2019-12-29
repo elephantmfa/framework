@@ -9,6 +9,10 @@ class SmtpResponseTest extends TestCase
 {
     use InteractsWithEventLoop;
 
+    public function test_example()
+    {
+        $this->assertTrue(true);
+    }
     // /** @test */
     // public function it_has_valid_helo_response()
     // {
