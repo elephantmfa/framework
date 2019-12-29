@@ -2,6 +2,7 @@
 
 namespace Elephant\EventLoop\Mail;
 
+use Elephant\Helpers\Dns;
 use Illuminate\Support\Str;
 use Elephant\Mail\Transport;
 use Elephant\Contracts\Mail\Mail;
@@ -10,8 +11,8 @@ use Elephant\Mail\Jobs\QueueProcessJob;
 use Illuminate\Contracts\Container\Container;
 use Elephant\EventLoop\Traits\CommunicateTrait;
 use Elephant\Filtering\Exception\DropException;
-use Elephant\Filtering\Exception\RejectException;
 use Elephant\Filtering\Exception\DeferException;
+use Elephant\Filtering\Exception\RejectException;
 use Elephant\Filtering\Exception\QuarantineException;
 
 class EventLoopData
@@ -161,7 +162,11 @@ class EventLoopData
             $this->mail->setSenderIp($remoteIp);
             $this->mail->getConnection()->receivedPort = $localPort;
             $this->mail->setProtocol('ESMTP');
-            $this->mail->setSenderName(gethostbyaddr($remoteIp) ?: '[UNKNOWN]');
+            $this->mail->setSenderName(
+                ($senderName = Dns::ptr($remoteIp)) !== 'nxdomain'
+                    ? $senderName
+                    : '[UNKNOWN]'
+            );
         }
 
         $this->handleWrapper(function () {
