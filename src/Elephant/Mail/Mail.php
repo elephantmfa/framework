@@ -3,6 +3,7 @@
 namespace Elephant\Mail;
 
 use Illuminate\Support\Str;
+use InvalidArgumentException;
 use Illuminate\Support\Carbon;
 use Illuminate\Contracts\Support\Jsonable;
 use Illuminate\Contracts\Support\Arrayable;
@@ -10,16 +11,34 @@ use Elephant\Contracts\Mail\Mail as MailContract;
 
 class Mail implements MailContract, Jsonable, Arrayable
 {
-    public $supplementalData;
+    const TIMINGS = 1;
+    const SUPPLEMENTAL = 2;
+    /**
+     * @var array<string,mixed> $supplementalData Data that can be assigned to,
+     *  to store additional information about the mail.
+     */
+    public $supplementalData = [];
+    /**
+     * @var array<string,float> $timings An array of to store timing information,
+     *  to track how long was spent at each stage of the mail process.
+     */
     public $timings = [];
 
+    /** @var string $raw The raw string version of the Mail. */
     protected $raw = '';
+    /** @var \Elephant\Mail\Envelope $envelope The envelope data. */
     protected $envelope;
+    /** @var \Elephant\Mail\Connection $connection The envelope data. */
     protected $connection;
+    /** @var array<string,array<string>> $headers */
     protected $headers = [];
+    /** @var array<\Elephant\Mail\BodyPart> $bodyParts */
     protected $bodyParts = [];
+    /** @var string $queueId */
     protected $queueId = '';
+    /** @var string $finalDestination */
     protected $finalDestination = '';
+    /** @var string boundary */
     protected $boundary = '';
 
     /**
@@ -205,7 +224,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     {
         $this->envelope->recipient = $recipient;
         if (isset($this->headers['cc'])) {
-            $this->alterHeader('cc', function ($header) use ($recipient) {
+            $this->alterHeader('cc', function (string $header) use ($recipient): string {
                 return $header.", <{$recipient}>";
             });
         } else {
@@ -294,7 +313,7 @@ class Mail implements MailContract, Jsonable, Arrayable
      */
     public function addRecipient(string $recipient): MailContract
     {
-        $this->envelope->recipients = $recipient;
+        $this->envelope->addRecipient($recipient);
 
         return $this;
     }
@@ -332,7 +351,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     /**
      * {@inheritdoc}
      */
-    public function getHeader(?string $header = null): array
+    public function getHeader(string $header = null): array
     {
         if (!isset($header)) {
             return $this->headers;
@@ -357,9 +376,9 @@ class Mail implements MailContract, Jsonable, Arrayable
     /**
      * {@inheritdoc}
      */
-    public function getHelo(): ?string
+    public function getHelo(): string
     {
-        return $this->envelope->helo;
+        return $this->envelope->helo ?: '';
     }
 
     /**
@@ -367,7 +386,7 @@ class Mail implements MailContract, Jsonable, Arrayable
      */
     public function getSenderIp(): string
     {
-        return $this->connection->senderIp ?? '0.0.0.0';
+        return $this->connection->senderIp ?: '0.0.0.0';
     }
 
     /**
@@ -375,7 +394,7 @@ class Mail implements MailContract, Jsonable, Arrayable
      */
     public function getSenderName(): string
     {
-        return $this->connection->senderName ?? 'UNKNOWN';
+        return $this->connection->senderName ?: 'UNKNOWN';
     }
 
     /**
@@ -383,13 +402,13 @@ class Mail implements MailContract, Jsonable, Arrayable
      */
     public function getProtocol(): string
     {
-        return $this->connection->protocol ?? 'SMTP';
+        return $this->connection->protocol ?: 'SMTP';
     }
 
     /**
      * {@inheritdoc}
      */
-    public function getRecipients(): ?array
+    public function getRecipients(): array
     {
         return $this->envelope->recipients;
     }
@@ -397,17 +416,17 @@ class Mail implements MailContract, Jsonable, Arrayable
     /**
      * {@inheritdoc}
      */
-    public function getSender(): ?string
+    public function getSender(): string
     {
-        return $this->envelope->sender;
+        return $this->envelope->sender ?: '';
     }
 
     /**
      * Get the queue ID of the message.
      *
-     * @return string|null
+     * @return string
      */
-    public function getQueueId(): ?string
+    public function getQueueId(): string
     {
         if (empty($this->queueId)) {
             $queueId = sha1(
@@ -427,9 +446,9 @@ class Mail implements MailContract, Jsonable, Arrayable
     /**
      * {@inheritdoc}
      */
-    public function getMimeBoundary(): ?string
+    public function getMimeBoundary(): string
     {
-        return $this->boundary;
+        return $this->boundary ?: '';
     }
 
     /**
@@ -445,9 +464,9 @@ class Mail implements MailContract, Jsonable, Arrayable
     /**
      * {@inheritdoc}
      */
-    public function getRaw(): ?string
+    public function getRaw(): string
     {
-        return $this->raw;
+        return $this->raw ?: '';
     }
 
     /**
@@ -476,6 +495,14 @@ class Mail implements MailContract, Jsonable, Arrayable
         return $this->connection;
     }
 
+    /**
+     * {@inheritdoc}
+     */
+    public function getEnvelope(): \Elephant\Mail\Envelope
+    {
+        return $this->envelope;
+    }
+
 
     /** {@inheritDoc} */
     public function removeAllRecipients(): MailContract
@@ -493,6 +520,31 @@ class Mail implements MailContract, Jsonable, Arrayable
         $this->envelope->removeRecipient($recipient);
 
         return $this;
+    }
+
+
+    /** {@inheritDoc} */
+    public function addExtraData(int $type, string $key, $data): void
+    {
+        if ($type === 1) {
+            $this->timings[$key] = $data;
+        } elseif ($type === 2) {
+            $this->supplementalData[$key] = $data;
+        } else {
+            throw new InvalidArgumentException('Type is invalid.');
+        }
+    }
+
+    /** {@inheritDoc} */
+    public function getExtraData(int $type, string $key)
+    {
+        if ($type === 1) {
+            return $this->timings[$key];
+        } elseif ($type === 2) {
+            return $this->supplementalData[$key];
+        }
+
+        throw new InvalidArgumentException('Type is invalid.');
     }
 
     /** {@inheritDoc} */
@@ -601,7 +653,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     {
         $boundary = '='.Str::random(16).'=';
         $this->setMimeBoundary($boundary);
-        $this->alterHeader('content-type', function ($header) use ($boundary) {
+        $this->alterHeader('content-type', function (string $header) use ($boundary): string {
             return "multipart/mixed; boundary=\"$boundary\"";
         });
     }

@@ -13,19 +13,23 @@ use InvalidArgumentException;
  */
 class Connection implements Arrayable
 {
-    protected $receivedPort;
-    protected $protocol;
-    protected $senderIp;
-    protected $senderName;
+    /** @var int $receivedPort */
+    protected $receivedPort = 0;
+    /** @var string $protocol */
+    protected $protocol = 'SMTP';
+    /** @var string $senderIp */
+    protected $senderIp = '';
+    /** @var string $senderName */
+    protected $senderName = '';
 
     /**
      * Get the protected params.
      *
      * @param string $get
      *
-     * @throws \InvalidArgumentException
-     *
      * @return mixed
+     *
+     * @throws \InvalidArgumentException
      */
     public function __get(string $name)
     {
@@ -42,9 +46,9 @@ class Connection implements Arrayable
      * @param string $name
      * @param mixed  $value
      *
-     * @throws \InvalidArgumentException
-     *
      * @return void
+     *
+     * @throws \InvalidArgumentException
      */
     public function __set(string $name, $value): void
     {
@@ -57,6 +61,7 @@ class Connection implements Arrayable
         throw new InvalidArgumentException("\$name must be in ['receivedPort', 'protocol', 'senderIp', 'senderName'].");
     }
 
+    /** {@inheritDoc} */
     public function toArray()
     {
         return [

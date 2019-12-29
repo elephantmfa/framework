@@ -9,10 +9,16 @@ use React\Socket\ConnectionInterface;
 
 class EventLoopData
 {
+    /** @var Application&\ArrayAccess $app */
     protected $app;
 
+    /** @var ConnectionInterface $connection */
     protected $connection;
 
+    /**
+     * @param Application&\ArrayAccess $app
+     * @param ConnectionInterface $connection
+     */
     public function __construct(Application $app, ConnectionInterface $connection)
     {
         $this->app = $app;

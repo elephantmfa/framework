@@ -7,7 +7,7 @@ use Elephant\Helpers\Exceptions\SocketException;
 class Socket
 {
     /** @var resource|null $socket */
-    protected $socket = null;
+    protected $socket;
 
     /** @var array $dsnData */
     protected $dsnData = [];
@@ -45,8 +45,10 @@ class Socket
 
     public function __destruct()
     {
-        socket_close($this->socket);
-        unset($this->socket, $this->dsnData);
+        if (! is_null($this->socket)) {
+            socket_close($this->socket);
+            unset($this->socket, $this->dsnData);
+        }
     }
 
     /**
@@ -59,6 +61,10 @@ class Socket
      */
     public function send(string $val): int
     {
+        if (is_null($this->socket)) {
+            throw new SocketException('Unable to validate socket.');
+        }
+
         $r = socket_send($this->socket, $val, strlen($val), 0);
 
         if ($r === false) {
@@ -96,6 +102,10 @@ class Socket
      */
     public function read(int $bytesToRead = 8192, int $readType = PHP_NORMAL_READ): string
     {
+        if (is_null($this->socket)) {
+            throw new SocketException('Unable to validate socket.');
+        }
+
         $ret = @socket_read($this->socket, $bytesToRead, $readType);
 
         if ($ret === false) {
@@ -108,12 +118,16 @@ class Socket
     /**
      * Set an option for the socket.
      *
-     * @param array option
+     * @param mixed $option
      * @return void
      * @throws SocketException Unable to set option.
      */
     public function setOption($option): void
     {
+        if (is_null($this->socket)) {
+            throw new SocketException('Unable to validate socket.');
+        }
+
         $success = socket_set_option(
             $this->socket,
             SOL_SOCKET,
@@ -139,6 +153,10 @@ class Socket
 
     public function getLastError(): string
     {
+        if (is_null($this->socket)) {
+            throw new SocketException('Unable to validate socket.');
+        }
+
         return socket_strerror(socket_last_error($this->socket));
     }
 
@@ -183,10 +201,10 @@ class Socket
      * @return array [$path, $port, $proto, $type]
      * @throws SocketException On invalid dsn.
      */
-    public static function breakDsn(string $dsn): ?array
+    public static function breakDsn(string $dsn): array
     {
         [$type, $path] = explode('://', $dsn, 2);
-        if (! isset($path) || empty($path) || ! isset($type) || empty($type)) {
+        if (empty($path) || empty($type)) {
             throw new SocketException("DSN [$dsn] is invalid.");
         }
 

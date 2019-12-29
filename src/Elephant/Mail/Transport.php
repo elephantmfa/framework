@@ -18,24 +18,24 @@ class Transport
     private $mail;
 
     /** @var string $destination */
-    private $destination;
+    private $destination = '';
 
     private function __construct(Mail $mail)
     {
         $this->mail = $mail;
     }
 
-    public static function send(Mail $mail)
+    public static function send(Mail $mail): void
     {
         (new static($mail))
             ->route();
     }
 
-    public static function sendTo(Mail $mail, string $destination)
+    public static function sendTo(Mail $mail, string $destination): void
     {
         (new static($mail))
             ->setDestination($destination)
-            ->route($destination);
+            ->route();
     }
 
     private function setDestination(string $destination): self
@@ -45,7 +45,7 @@ class Transport
         return $this;
     }
 
-    private function route()
+    private function route(): void
     {
         if (empty($this->destination)) {
             $finalDestiny = $this->mail->getFinalDestination();
@@ -60,7 +60,10 @@ class Transport
             // Final Destiny is quarantine
             $queueId = $this->mail->getQueueId();
             $folderName = substr($queueId, 0, 2);
-            app('filesystem')->put("quarantine/{$folderName}/{$queueId}.eml", $this->mail->getRaw());
+
+            /** @var \Illuminate\Filesystem\FilesystemManager $filesystem */
+            $filesystem = app('filesystem');
+            $filesystem->put("quarantine/{$folderName}/{$queueId}.eml", $this->mail->getRaw());
         } elseif (preg_match('/^.+@\w+\..+$/', $finalDestiny)) {
             // Final Destiny is an email address
             $this->mail->removeAllRecipients()
@@ -105,9 +108,9 @@ class Transport
         if (strpos($helo, 'XFORWARD') !== false) {
             //@todo: send xforward
         }
-        $socket->send("MAIL FROM: {$this->mail->envelope->sender}\r\n");
+        $socket->send("MAIL FROM: {$this->mail->getEnvelope()->sender}\r\n");
         $this->processResp($socket->read(), 'MAIL FROM');
-        foreach ($this->mail->envelope->recipients as $recipient) {
+        foreach ($this->mail->getEnvelope()->recipients as $recipient) {
             $socket->send("RCPT TO: {$recipient}\r\n");
             $this->processResp($socket->read(), 'RCPT TO');
         }

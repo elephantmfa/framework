@@ -7,6 +7,7 @@ use Elephant\Filtering\Scanners\Scanner;
 use Elephant\Contracts\Mail\Scanner as ScannerContract;
 use Elephant\Helpers\Exceptions\SocketException;
 use Elephant\Helpers\Socket;
+use Elephant\Mail\Mail as M;
 
 class SpamAssassin extends Scanner
 {
@@ -15,7 +16,7 @@ class SpamAssassin extends Scanner
      *
      * @var int $contentLength
      */
-    protected $contentLength;
+    protected $contentLength = 0;
 
     /**
      * Construct a new SpamAssassin Scanner instance.
@@ -35,17 +36,18 @@ class SpamAssassin extends Scanner
     /** {@inheritdoc} */
     public function scan(Mail $mail): ?ScannerContract
     {
-        $this->mail = $mail;
         $this->contentLength = strlen(str_replace("\n", "\r\n", $mail->getRaw()));
         $maxSize = config('scanners.spamassassin.max_size', 0);
         if ($maxSize > 0 && $this->contentLength > $maxSize) {
             $this->contentLength = $maxSize;
         }
-        
+
         $timeBegin = microtime(true);
 
         try {
-            $socket = app(Socket::class)->setDsn(config('scanners.spamassassin.socket', 'ipv4://127.0.0.1:783'));
+            /** @var Socket $socket */
+            $socket = app(Socket::class);
+            $socket = $socket->setDsn(config('scanners.spamassassin.socket', 'ipv4://127.0.0.1:783'));
             $socket->setOption(['sec' => config('scanners.spamassassin.timeout', 10), 'usec' => 0]);
 
             $socket->send('HEADERS SPAMC/1.2');
@@ -56,7 +58,7 @@ class SpamAssassin extends Scanner
             $socket->send('');
 
             // Move on from headers to message.
-            $lines = explode("\n", $this->mail->getRaw());
+            $lines = explode("\n", $mail->getRaw());
             $bytes = 0;
             foreach ($lines as $line) {
                 $bytes += strlen("$line\r\n");
@@ -110,7 +112,7 @@ class SpamAssassin extends Scanner
             return null;
         }
 
-        $this->mail->timings['spamassassin'] = microtime(true) - $timeBegin;
+        $mail->addExtraData(M::TIMINGS, 'spamassassin', microtime(true) - $timeBegin);
 
         return $this;
     }

@@ -2,13 +2,14 @@
 
 namespace Elephant\Helpers;
 
-use Elephant\Helpers\Exceptions\NoSpfException;
-use Elephant\Helpers\Matchers\Regex;
-use Illuminate\Support\Collection;
 use React\Dns\Model\Message;
+use Illuminate\Support\Collection;
+use Elephant\Helpers\Matchers\Regex;
 use React\EventLoop\Factory as Loop;
 use React\Dns\RecordNotFoundException;
 use React\Dns\Resolver\Factory as Resolver;
+use Elephant\Helpers\Exceptions\NoSpfException;
+use Elephant\Helpers\Exceptions\NoDmarcException;
 
 class Dns
 {
@@ -151,8 +152,9 @@ class Dns
      * If no DMARC record is found, it will lookup the DMARC record for the root
      *  domain, if the lookup was for a subdomain.
      *
-     * @param  string $domain The domain to get the DMARC record for.
-     * @return string         The DMARC record.
+     * @param  string $domain       The domain to get the DMARC record for.
+     * @return array<string,string> The DMARC record.
+     *
      * @throws NoDmarcException If the domain doesn't have an DMARC record.
      */
     public static function dmarc(string $domain): array
@@ -166,9 +168,9 @@ class Dns
 
             if (Regex::match('/^v=dmarc1/i', $response)) {
                 return Collection::make(explode(';', $response))
-                    ->filter(function ($rr) {
+                    ->filter(function (string $rr) {
                         return ! Regex::match('/^v=/i', $rr);
-                    })->map(function ($rr) {
+                    })->map(function (string $rr) {
                         [$key, $val] = explode('=', $rr);
                         $key = trim($key);
                         $val = trim($val);
@@ -185,7 +187,7 @@ class Dns
             return static::dmarc($rootDomain);
         }
 
-        throw new NoSpfException($domain);
+        throw new NoDmarcException($domain);
     }
 
     /**
@@ -231,7 +233,7 @@ class Dns
             }
             $promises[] = static::$resolver->resolveAll($lookup, $type)
                 ->then(
-                    function ($response) use ($lookupKey, &$results, &$counter) {
+                    function (array $response) use ($lookupKey, &$results, &$counter) {
                         $results[$lookupKey] = $response;
                         $counter--;
 
@@ -264,6 +266,7 @@ class Dns
             config('app.dns.timeout', 10),
             function () use ($promises) {
                 foreach ($promises as $promise) {
+                    /** @var $promise */
                     $promise->cancel();
                 }
                 static::$loop->stop();
@@ -300,5 +303,7 @@ class Dns
         if (preg_match('/(?P<domain>[a-z0-9][a-z0-9\-]{1,63}\.[a-z\.]{2,6})$/i', $domain, $m)) {
             return $m['domain'];
         }
+
+        return $domain;
     }
 }

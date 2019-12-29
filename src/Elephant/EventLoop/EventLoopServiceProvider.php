@@ -2,16 +2,20 @@
 
 namespace Elephant\EventLoop;
 
-use Elephant\Contracts\EventLoop\ProcessManager;
-use Illuminate\Support\ServiceProvider;
-use React\EventLoop\Factory;
-use React\Socket\ConnectionInterface;
+use RuntimeException;
 use React\Socket\Server;
+use React\EventLoop\Factory;
 use React\Socket\UnixServer;
+use React\Socket\ConnectionInterface;
+use Illuminate\Support\ServiceProvider;
 use React\Stream\ReadableResourceStream;
 use React\Stream\WritableResourceStream;
-use RuntimeException;
+use Elephant\Contracts\EventLoop\ProcessManager;
+use Illuminate\Contracts\Foundation\Application;
 
+/**
+ * @property \Illuminate\Contracts\Foundation\Application&\ArrayAccess $app
+ */
 class EventLoopServiceProvider extends ServiceProvider
 {
     /**
@@ -26,23 +30,26 @@ class EventLoopServiceProvider extends ServiceProvider
             \Elephant\EventLoop\ProcessManager::class
         );
 
-        $this->app->singleton('loop', function ($app) {
+        $this->app->singleton('loop', function (Application $app) {
             return Factory::create();
         });
 
-        $this->app->singleton('stdin', function ($app) {
-            return new ReadableResourceStream(STDIN, $app->loop);
+        $this->app->singleton('stdin', function (Application $app) {
+            /** @var Application&\ArrayAccess $app */
+            return new ReadableResourceStream(STDIN, $app['loop']);
         });
-        $this->app->singleton('stdout', function ($app) {
-            return new WritableResourceStream(STDOUT, $app->loop);
+        $this->app->singleton('stdout', function (Application $app) {
+            /** @var Application&\ArrayAccess $app */
+            return new WritableResourceStream(STDOUT, $app['loop']);
         });
 
-        $this->app->bind('server', function ($app, $params) {
+        $this->app->bind('server', function (Application $app, array $params) {
+            /** @var Application&\ArrayAccess $app */
             $port = $params['port'];
             if (!isset($port)) {
                 throw new RuntimeException('No port provided to listen on.');
             }
-            $server = new Server($port, $app->loop);
+            $server = new Server($port, $app['loop']);
 
             $server->on('connection', function (ConnectionInterface $connection) use ($app) {
                 $pm = $app[ProcessManager::class];
@@ -72,10 +79,10 @@ class EventLoopServiceProvider extends ServiceProvider
 
                 // Create a 2-way bridge between the input and output of the
                 //     connection and subprocess.
-                $connection->on('data', function ($data) use ($process) {
+                $connection->on('data', function (string $data) use ($process) {
                     $process->stdin->write($data);
                 });
-                $process->stdout->on('data', function ($data) use ($connection, $pid) {
+                $process->stdout->on('data', function (string $data) use ($connection, $pid) {
                     $connection->write($data);
                     if (strpos($data, 'Goodbye') !== false) {
                         $this->app[ProcessManager::class]->markWaiting($pid);
@@ -88,7 +95,7 @@ class EventLoopServiceProvider extends ServiceProvider
                         }
                     }
                 });
-                $process->stderr->on('data', function ($error) {
+                $process->stderr->on('data', function (string $error) {
                     error($error);
                 });
 
@@ -97,19 +104,20 @@ class EventLoopServiceProvider extends ServiceProvider
                 $connection->on('error', new EventLoopError($app, $connection));
 
                 $process->stdin->write(
-                    'CONNECT remote:'.$connection->getRemoteAddress().
-                        ' local:'.$connection->getLocalAddress()."\r\n"
+                    'CONNECT remote:' . (string) $connection->getRemoteAddress() .
+                        ' local:' . (string) $connection->getLocalAddress() . "\r\n"
                 );
             });
 
             return $server;
         });
 
-        $this->app->singleton('ipc', function ($app) {
-            $server = new UnixServer(storage_path('app/run/elephant.sock'), $app->loop);
+        $this->app->singleton('ipc', function (Application $app) {
+            /** @var Application&\ArrayAccess $app */
+            $server = new UnixServer(storage_path('app/run/elephant.sock'), $app['loop']);
             $server->on('connection', function (ConnectionInterface $connection) use ($app) {
                 $connection->on('data', new IPC\EventLoopData($app, $connection));
-                $connection->on('error', function ($error) use ($connection) {
+                $connection->on('error', function (string $error) use ($connection) {
                     error("IPC Error: $error");
                     $connection->write("IPC Error: $error");
                 });

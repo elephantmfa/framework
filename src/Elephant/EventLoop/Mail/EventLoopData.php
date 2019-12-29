@@ -6,6 +6,7 @@ use Elephant\Helpers\Dns;
 use Illuminate\Support\Str;
 use Elephant\Mail\Transport;
 use Elephant\Contracts\Mail\Mail;
+use Elephant\Mail\Mail as M;
 use Illuminate\Pipeline\Pipeline;
 use Elephant\Mail\Jobs\QueueProcessJob;
 use Illuminate\Contracts\Container\Container;
@@ -22,7 +23,7 @@ class EventLoopData
     /**
      * The service container.
      *
-     * @var \Illuminate\Contracts\Container\Container
+     * @var \Illuminate\Contracts\Container\Container&\ArrayAccess
      */
     protected $app;
 
@@ -50,10 +51,8 @@ class EventLoopData
     /**
      * Builds the event loop data invokable class.
      *
-     * @param \Illuminate\Contracts\Container\Container $app
-     * @param \React\Socket\ConnectionInterface         $connection
-     * @param \Elephant\Contracts\Mail\Mail             $mail
-     * @param array                                     $filters
+     * @param \Elephant\Foundation\Application $app
+     * @param array                            $filters
      *
      * @return void
      */
@@ -61,7 +60,6 @@ class EventLoopData
     {
         $this->app = $app;
         $this->filters = $filters;
-        $this->mail = null;
         $this->readMode = false;
         $this->connection = $this->app->stdout;
     }
@@ -78,13 +76,13 @@ class EventLoopData
         if (substr_count($data, "\n") > 1) {
             $chunks = explode("\n", $data);
 
-            $this->mail->supplementalData['pipelining_in_use'] = true;
 
             foreach ($chunks as $chunk) {
                 $chunk = rtrim($chunk, "\r");
                 $this->handle("$chunk\r\n");
             }
 
+            $this->mail->addExtraData(M::SUPPLEMENTAL, 'pipelining_in_use', true);
             return;
         }
 
@@ -177,11 +175,11 @@ class EventLoopData
                     ->through($this->filters['connect'] ?? [])
                     ->thenReturn();
             }
-            $this->say('220 '.$this->app->config['relay.greeting_banner'] ?? 'Welcome to ElephantMFA ESMTP');
+            $this->say('220 '.$this->app['config']['relay.greeting_banner'] ?: 'Welcome to ElephantMFA ESMTP');
         });
 
-        $this->app->loop->addTimer($this->app->config['relay.timeout'], function () {
-            $this->close('421 4.4.2 '.$this->app->config['app.name'].' Error: timeout exceeded');
+        $this->app['loop']->addTimer($this->app['config']['relay.timeout'], function () {
+            $this->close('421 4.4.2 '.$this->app['config']['app.name'].' Error: timeout exceeded');
         });
     }
 
@@ -246,7 +244,7 @@ class EventLoopData
         unset($this->mail);
         $nmail = $this->app->make(Mail::class);
         $nmail->setConnection($this->mail->getConnection());
-        $nmail->setHelo($this->mail->getHelo() ?? '');
+        $nmail->setHelo($this->mail->getHelo() ?: '');
         $this->mail = $nmail;
         $this->say('250 2.0.0 Ok');
     }
@@ -276,7 +274,7 @@ class EventLoopData
         if (! empty($this->mail->getSender())) {
             $nmail = $this->app[Mail::class];
             $nmail->setConnection($this->mail->getConnection());
-            $nmail->setHelo($this->mail->getHelo() ?? '');
+            $nmail->setHelo($this->mail->getHelo() ?: '');
             $this->mail = $nmail;
         }
         $helo_parts = explode(' ', $helo, 2);
@@ -300,7 +298,7 @@ class EventLoopData
                     ->say('250 XFORWARD');
             }
         });
-        $this->mail->timings['helo'] = microtime(true) - $time;
+        $this->mail->addExtraData(M::TIMINGS, 'helo', microtime(true) - $time);
     }
 
     /**
@@ -337,7 +335,7 @@ class EventLoopData
             }
             $this->say('250 2.1.0 Ok');
         });
-        $this->mail->timings['mail_from'] = microtime(true) - $time;
+        $this->mail->addExtraData(M::TIMINGS, 'mail_from', microtime(true) - $time);
     }
 
     /**
@@ -374,10 +372,10 @@ class EventLoopData
             }
             $this->say('250 2.1.5 Ok');
         });
-        $this->mail->timings['rcpt_to'] = microtime(true) - $time;
+        $this->mail->addExtraData(M::TIMINGS, 'rcpt_to', microtime(true) - $time);
     }
 
-    protected function handleXForward(string $xforward)
+    protected function handleXForward(string $xforward): void
     {
         $time = microtime(true);
         if (count($this->mail->getRecipients()) < 1) {
@@ -431,7 +429,7 @@ class EventLoopData
                 $returnOk = true;
             });
             if (! $returnOk) {
-                $this->mail->timings['xforward'] = microtime(true) - $time;
+                $this->mail->addExtraData(M::TIMINGS, 'xforward', microtime(true) - $time);
 
                 return;
             }
@@ -452,7 +450,7 @@ class EventLoopData
         if ($returnOk) {
             $this->say('250 Ok');
         }
-        $this->mail->timings['xforward'] = microtime(true) - $time;
+        $this->mail->addExtraData(M::TIMINGS, 'xforward', microtime(true) - $time);
     }
 
     /**
@@ -471,10 +469,6 @@ class EventLoopData
         }
 
         $time = microtime(true);
-        $this->readingBody = false;
-        $this->readMode = false;
-        $this->endingMail = false;
-        $this->currentLine = '';
         $this->handleWrapper(function () {
             if ($this->mail->getFinalDestination() !== 'allow') {
                 $this->mail = $this->app[Pipeline::class]
@@ -486,9 +480,9 @@ class EventLoopData
             $queueId = $this->generateQueueId();
             $this->say("250 2.0.0 Ok: queued as $queueId");
         });
-        $this->mail->timings['data'] = microtime(true) - $time;
+        $this->mail->addExtraData(M::TIMINGS, 'data', microtime(true) - $time);
 
-        $queueProcess = $this->app->config['relay.queue_processor'] ?? 'process';
+        $queueProcess = $this->app['config']['relay.queue_processor'] ?? 'process';
         if ($queueProcess == 'process') {
             QueueProcessJob::dispatchNow($this->mail, $this->filters);
         } elseif ($queueProcess == 'queue') {
@@ -509,13 +503,13 @@ class EventLoopData
         $folder = substr($queueId, 0, 2);
 
         // First, let's check if queuing is disabled, and handle that upfront.
-        if ($this->app->config['relay.queue_processor'] == 'none') {
+        if ($this->app['config']['relay.queue_processor'] == 'none') {
             return $queueId;
         }
 
         // If queueing is enabled, we need to store the mail in the queue for
         //   later processing.
-        $this->app->filesystem->disk('tmp')->put("queue/{$folder}/{$queueId}", $this->mail->getRaw());
+        $this->app['filesystem']->disk('tmp')->put("queue/{$folder}/{$queueId}", $this->mail->getRaw());
 
         return $queueId;
     }
@@ -546,7 +540,7 @@ class EventLoopData
             if ($drop->getCode() >= 500) {
                 $this->close((string) $drop);
 
-                $this->mail = null;
+                unset($this->mail);
             }
             $this->say((string) $drop);
             $this->mail->setFinalDestination('drop');

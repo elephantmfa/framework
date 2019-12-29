@@ -36,7 +36,7 @@ class ProcessManager implements PMContract, ArrayAccess
      *
      * @var array
      */
-    public $processHandled;
+    public $processHandled = [];
 
     /**
      * Construct a new Process Manager.
@@ -65,7 +65,7 @@ class ProcessManager implements PMContract, ArrayAccess
     /** {@inheritdoc} */
     public function getWaiting(): array
     {
-        return array_filter($this->processes, function ($process, $pid) {
+        return array_filter($this->processes, function (Process $process, string $pid) {
             return in_array($pid, $this->waitingProcesses);
         }, ARRAY_FILTER_USE_BOTH);
     }
@@ -85,8 +85,8 @@ class ProcessManager implements PMContract, ArrayAccess
     /** {@inheritdoc} */
     public function getBusy(): array
     {
-        return array_filter($this->processes, function ($process, $pid) {
-            return !in_array($pid, $this->waitingProcesses);
+        return array_filter($this->processes, function (Process $process, string $pid) {
+            return ! in_array($pid, $this->waitingProcesses);
         }, ARRAY_FILTER_USE_BOTH);
     }
 
@@ -109,23 +109,29 @@ class ProcessManager implements PMContract, ArrayAccess
     }
 
     /** {@inheritdoc} */
-    public function getProcess(string $pid): Process
+    public function getProcess(string $pid): ?Process
     {
         foreach ($this->processes as $process_id => $process) {
             if ($pid === $process_id) {
                 return $process;
             }
         }
+
+        return null;
     }
 
     /** {@inheritdoc} */
     public function createProcess(): string
     {
+        /** @var string $elephantPath */
         $elephantPath = config('app.command_path', base_path('elephant'));
-        $pid = sha1(Str::random().Carbon::now()->toString());
+        $pid = sha1(Str::random() . Carbon::now()->toString());
         $command = "php {$elephantPath} subprocess:start --id=\"$pid\"";
         $this->processes[$pid] = new Process($command);
-        $this->processes[$pid]->start($this->app->loop);
+
+        /** @var \Elephant\Foundation\Application $app */
+        $app = $this->app;
+        $this->processes[$pid]->start($app->loop);
 
         $this->waitingProcesses[] = $pid;
         $this->processHandled[$pid] = 0;

@@ -9,7 +9,7 @@ trait Dispatchable
     /**
      * Dispatch the job with the given arguments.
      *
-     * @return \Illuminate\Foundation\Bus\PendingDispatch
+     * @return \Elephant\Foundation\Bus\PendingDispatch
      */
     public static function dispatch()
     {

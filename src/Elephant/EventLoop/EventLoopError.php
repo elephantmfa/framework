@@ -8,9 +8,10 @@ use React\Socket\ConnectionInterface;
 
 class EventLoopError
 {
+    /** @var Container $app */
     protected $app;
+    /** @var ConnectionInterface $connection */
     protected $connection;
-    protected $mail;
 
     public function __construct(Container $app, ConnectionInterface $connection)
     {

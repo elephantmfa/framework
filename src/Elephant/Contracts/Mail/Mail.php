@@ -3,6 +3,8 @@
 namespace Elephant\Contracts\Mail;
 
 use Elephant\Mail\BodyPart;
+use Elephant\Mail\Envelope;
+use Elephant\Mail\Connection;
 
 interface Mail
 {
@@ -192,14 +194,14 @@ interface Mail
      *
      * @return array
      */
-    public function getHeader(?string $header = null): array;
+    public function getHeader(string $header = null): array;
 
     /**
      * Get the HELO of the message.
      *
-     * @return string|null
+     * @return string
      */
-    public function getHelo(): ?string;
+    public function getHelo(): string;
 
     /**
      * Get the sender IP of the message.
@@ -220,7 +222,14 @@ interface Mail
      *
      * @return \Elephant\Mail\Connection
      */
-    public function getConnection(): \Elephant\Mail\Connection;
+    public function getConnection(): Connection;
+
+    /**
+     * Get the envelope of the mail
+     *
+     * @return \Elephant\Mail\Envelope
+     */
+    public function getEnvelope(): Envelope;
 
     /**
      * Get the protocol of the message.
@@ -232,9 +241,9 @@ interface Mail
     /**
      * Get the recipients of the message.
      *
-     * @return array|null
+     * @return array
      */
-    public function getRecipients(): ?array;
+    public function getRecipients(): array;
 
     /**
      * Get the index of the newest instance of a header.
@@ -248,23 +257,23 @@ interface Mail
     /**
      * Get the sender of the message.
      *
-     * @return string|null
+     * @return string
      */
-    public function getSender(): ?string;
+    public function getSender(): string;
 
     /**
      * Get the queue ID of the message.
      *
-     * @return string|null
+     * @return string
      */
-    public function getQueueId(): ?string;
+    public function getQueueId(): string;
 
     /**
      * Get the MIME boundary of the message.
      *
-     * @return string|null
+     * @return string
      */
-    public function getMimeBoundary(): ?string;
+    public function getMimeBoundary(): string;
 
     /**
      * Get the final destination for the mail.
@@ -285,9 +294,9 @@ interface Mail
     /**
      * Get the raw data of the mail.
      *
-     * @return string|null
+     * @return string
      */
-    public function getRaw(): ?string;
+    public function getRaw(): string;
 
     /**
      * Get the body parts of the mail.
@@ -319,4 +328,27 @@ interface Mail
      *   finished processing.
      */
     public function processLine(string $data): bool;
+
+    /**
+     * Add extra data to the mail.
+     *
+     * @param  int    $type Can be either "timing" (1) or "supplemental" (2).
+     * @param  string $key
+     * @param  mixed  $data The data to set.
+     * @return void
+     *
+     * @throws \InvalidArgumentException
+     */
+    public function addExtraData(int $type, string $key, $data): void;
+
+    /**
+     * Get extra data.
+     *
+     * @param  int    $type Can be either "timing" (1) or "supplemental" (2).
+     * @param  string $key
+     * @return mixed
+     *
+     * @throws \InvalidArgumentException
+     */
+    public function getExtraData(int $type, string $key);
 }

@@ -71,9 +71,9 @@ interface ProcessManager
      *
      * @param string $pid The process ID to get the process of.
      *
-     * @return Process
+     * @return Process|null
      */
-    public function getProcess(string $pid): Process;
+    public function getProcess(string $pid): ?Process;
 
     /**
      * Create a new waiting process.

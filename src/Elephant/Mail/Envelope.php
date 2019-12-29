@@ -6,14 +6,17 @@ use Illuminate\Contracts\Support\Arrayable;
 use InvalidArgumentException;
 
 /**
- * @property string        $helo
- * @property string        $sender
- * @property array<string> $recipients
+ * @property       string        $helo
+ * @property       string        $sender
+ * @property       array<string> $recipients
  */
 class Envelope implements Arrayable
 {
+    /** @var string $helo */
     protected $helo;
+    /** @var string $sender */
     protected $sender;
+    /** @var array<string> $recipients */
     protected $recipients;
 
     public function __construct()
@@ -53,7 +56,7 @@ class Envelope implements Arrayable
     {
         if (in_array($name, ['helo', 'sender', 'recipients'])) {
             if ($name == 'recipients') {
-                $this->recipients[] = $value;
+                $this->addRecipient($value);
 
                 return;
             }
@@ -63,6 +66,11 @@ class Envelope implements Arrayable
         }
 
         throw new InvalidArgumentException("\$name must be in ['helo', 'sender', 'recipients'].");
+    }
+
+    public function addRecipient(string $recipient): void
+    {
+        $this->recipients[] = $recipient;
     }
 
     public function removeRecipient(string $recipient): void

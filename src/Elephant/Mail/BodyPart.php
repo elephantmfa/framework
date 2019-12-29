@@ -17,13 +17,20 @@ use InvalidArgumentException;
  */
 class BodyPart implements Arrayable, Countable
 {
-    protected $raw;
+    /** @var string $raw */
+    protected $raw = '';
 
-    protected $filename;
-    protected $disposition; // attachment | body
-    protected $size;
-    protected $contentTransferEncoding;
-    protected $contentType;
+    /** @var string $filename */
+    protected $filename = '';
+    /** @var string $disposition */
+    protected $disposition = ''; // attachment | body
+    /** @var int $size */
+    protected $size = 0;
+    /** @var string $contentTransferEncoding */
+    protected $contentTransferEncoding = '';
+    /** @var string $contentType */
+    protected $contentType = '';
+    /** @var string $body */
     protected $body = '';
 
     public static function fromRaw(string $raw): self
@@ -81,7 +88,7 @@ class BodyPart implements Arrayable, Countable
     /**
      * Get the attachment's metadata as an array.
      *
-     * @return void
+     * @return array<string,mixed>
      */
     public function toArray()
     {
@@ -111,11 +118,11 @@ class BodyPart implements Arrayable, Countable
     /**
      * Get one of the protected parameters.
      *
-     * @param mixed $val
+     * @param string $val
      *
-     * @return void
+     * @return mixed
      */
-    public function __get($val)
+    public function __get(string $val)
     {
         if (in_array($val, ['filename', 'disposition', 'size', 'contentTransferEncoding', 'contentType'])) {
             return $this->$val;

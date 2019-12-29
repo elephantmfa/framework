@@ -7,6 +7,10 @@ use Illuminate\Bus\Queueable;
 use Elephant\Contracts\Mail\Mail;
 use Illuminate\Pipeline\Pipeline;
 use Elephant\Foundation\Bus\Dispatchable;
+use Elephant\Filtering\Exception\DropException;
+use Elephant\Filtering\Exception\DeferException;
+use Elephant\Filtering\Exception\RejectException;
+use Elephant\Filtering\Exception\QuarantineException;
 
 class QueueProcessJob
 {
@@ -15,12 +19,14 @@ class QueueProcessJob
     /** @var \Elephant\Contracts\Mail\Mail $mail */
     protected $mail;
 
-    /** @var array $filters */
-    protected $filers;
+    /** @var array<string,array> $filters */
+    protected $filters;
 
     /**
      * Create a new job instance.
      *
+     * @param \Elephant\Contracts\Mail\Mail $mail
+     * @param array<string,array> $filters
      * @return void
      */
     public function __construct(Mail $mail, array $filters)
@@ -46,7 +52,9 @@ class QueueProcessJob
 
         Transport::send($this->mail);
 
-        app('filesystem')->disk('tmp')->delete("queue/{$this->mail->getQueueId()}");
+        /** @var \Illuminate\Filesystem\FilesystemManager $filesystem */
+        $filesystem = app('filesystem');
+        $filesystem->disk('tmp')->delete("queue/{$this->mail->getQueueId()}");
     }
 
     /**

@@ -10,7 +10,10 @@ class EventLoopClose
 {
     use CommunicateTrait;
 
+    /** @var Container $app */
     protected $app;
+    /** @var ConnectionInterface $connection */
+    protected $connection;
 
     public function __construct(Container $app, ConnectionInterface $connection)
     {

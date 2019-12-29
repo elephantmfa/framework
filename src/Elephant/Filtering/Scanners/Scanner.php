@@ -8,13 +8,6 @@ use Elephant\Contracts\Mail\Scanner as ScannerContract;
 abstract class Scanner implements ScannerContract
 {
     /**
-     * The mail message to be scanning.
-     *
-     * @var \Elephant\Contracts\Mail\Mail $mail
-     */
-    protected $mail;
-
-    /**
      * The user email to use when scanning.
      *
      * @var string $user

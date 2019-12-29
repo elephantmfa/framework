@@ -32,17 +32,17 @@ if (! function_exists('config')) {
      * @param array|string|null $key
      * @param mixed             $default
      *
-     * @return mixed|\Illuminate\Config\Repository
+     * @return mixed
      * @throws \Illuminate\Contracts\Container\BindingResolutionException
      */
     function config($key = null, $default = null)
     {
         if (is_null($key)) {
-            return app('config');
+            return app()->config;
         }
 
         if (is_array($key)) {
-            return app('config')->set($key);
+            return app()->config->set($key);
         }
 
         return app()->config->get($key, $default);
@@ -60,11 +60,12 @@ if (! function_exists('info')) {
      */
     function info(?string $logMessage)
     {
-        $pid = config('app.process_id') ?? '';
+        /** @var string $pid */
+        $pid = config('app.process_id', '');
         if (! empty($pid)) {
             $pid = "[$pid] ";
         }
-        app('log')->info("$pid$logMessage");
+        app()->log->info("$pid$logMessage");
         if (config('app.debug') && empty($pid)) {
             echo '[' . Carbon::now() . "] $pid$logMessage\n";
         }
@@ -82,11 +83,12 @@ if (! function_exists('error')) {
      */
     function error(?string $logMessage)
     {
+        /** @var string $pid */
         $pid = config('app.process_id') ?? '';
         if (! empty($pid)) {
             $pid = "[$pid] ";
         }
-        app('log')->error("$pid$logMessage");
+        app()->log->error("$pid$logMessage");
         if (config('app.debug') && empty($pid)) {
             echo '[' . Carbon::now() . "]E $pid$logMessage\n";
         }
@@ -108,28 +110,15 @@ if (! function_exists('debug')) {
             return;
         }
 
+        /** @var string $pid */
         $pid = config('app.process_id') ?? '';
         if (! empty($pid)) {
             $pid = "[$pid] ";
         }
-        app('log')->debug("$pid$logMessage");
+        app()->log->debug("$pid$logMessage");
         if (empty($pid)) {
             echo '[' . Carbon::now() . "]D $pid$logMessage\n";
         }
-    }
-}
-
-if (! function_exists('dd')) {
-    /**
-     * Die and var_export the data.
-     *
-     * @param mixed $dump
-     *
-     * @return void
-     */
-    function dd($dump)
-    {
-        die(var_export($dump, true) . "\n");
     }
 }
 
@@ -201,7 +190,7 @@ if (! function_exists('validate_ip')) {
                 }
             }
 
-            return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6);
+            return (bool) filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6);
         }
         if (preg_match('/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?/', $ip) === false) {
             return false;
@@ -214,7 +203,7 @@ if (! function_exists('validate_ip')) {
             }
         }
 
-        return filter_var($ip, FILTER_VALIDATE_IP);
+        return (bool) filter_var($ip, FILTER_VALIDATE_IP);
     }
 }
 

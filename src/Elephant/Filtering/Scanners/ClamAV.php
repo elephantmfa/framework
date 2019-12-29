@@ -5,6 +5,7 @@ namespace Elephant\Filtering\Scanners;
 use Elephant\Filtering\Scanners\Scanner;
 use Elephant\Contracts\Mail\Scanner as ScannerContract;
 use Elephant\Contracts\Mail\Mail;
+use Elephant\Mail\Mail as M;
 use Elephant\Helpers\Exceptions\SocketException;
 use Elephant\Helpers\Socket;
 
@@ -15,18 +16,27 @@ class ClamAV extends Scanner
     const FOUND_REGEX = '/^(.*):\s+(?!Infected Archive)(.*)\s+FOUND$/';
     const ERROR_REGEX = '/^(.*):\s+(.*)\s+ERROR$/';
 
-    /** @var \Illuminate\Filesystem\FileSystem $filesystem */
+    /** @var \Illuminate\Contracts\Filesystem\Filesystem $filesystem */
     private $filesystem;
 
-    /** @var Socket $socket */
-    private $socket;
+    /** @var Socket|null $socket */
+    private $socket = null;
+
+    /**
+     * The mail message to be scanning.
+     *
+     * @var \Elephant\Contracts\Mail\Mail|null $mail
+     */
+    protected $mail = null;
 
     /** {@inheritDoc} */
     public function __construct()
     {
         parent::__construct();
 
-        $this->filesystem = app('filesystem')->disk('tmp');
+        /** @var \Illuminate\Filesystem\FilesystemManager $filesystem */
+        $filesystem = app('filesystem');
+        $this->filesystem = $filesystem->disk('tmp');
 
         $this->results = [
             'infected' => false,
@@ -51,21 +61,21 @@ class ClamAV extends Scanner
 
         if ($scanOnDisk) {
             if (! $this->multiscan()) {
-                $this->mail->timings['clamav'] = microtime(true) - $timeBegin;
+                $this->mail->addExtraData(M::TIMINGS, 'clamav', microtime(true) - $timeBegin);
                 unset($this->socket);
 
                 return null;
             }
         } else {
             if (! $this->instream()) {
-                $this->mail->timings['clamav'] = microtime(true) - $timeBegin;
+                $this->mail->addExtraData(M::TIMINGS, 'clamav', microtime(true) - $timeBegin);
                 unset($this->socket);
 
                 return null;
             }
         }
 
-        $this->mail->timings['clamav'] = microtime(true) - $timeBegin;
+        $this->mail->addExtraData(M::TIMINGS, 'clamav', microtime(true) - $timeBegin);
         unset($this->socket);
 
         return $this;
@@ -73,6 +83,10 @@ class ClamAV extends Scanner
 
     private function genFiles(): string
     {
+        if (! isset($this->mail)) {
+            return '';
+        }
+
         $queueId = $this->mail->getQueueId();
         $sendEmail = config('scanners.clamav.send_email.enabled', false);
         if ($sendEmail) {
@@ -92,7 +106,7 @@ class ClamAV extends Scanner
                 $name .= '.html';
             }
 
-            if (! is_null($bodyPart->filename)) {
+            if (! empty($bodyPart->filename)) {
                 $name = $bodyPart->filename;
             }
             if ($bodyPart->size > $maxSize) {
@@ -111,8 +125,14 @@ class ClamAV extends Scanner
      */
     private function multiscan(): bool
     {
+        if (! isset($this->socket)) {
+            return false;
+        }
+
         $lpath = $this->genFiles();
-        $fpath = $this->filesystem->path($lpath);
+        /** @var \Illuminate\Filesystem\Filesystem $fs */
+        $fs = $this->filesystem;
+        $fpath = $fs->path($lpath);
 
         if (! $this->sendCommand("MULTISCAN {$fpath}")) {
             $this->error = 'Unable to write to socket!';
@@ -133,6 +153,9 @@ class ClamAV extends Scanner
      */
     private function instream(): bool
     {
+        if (is_null($this->mail)) {
+            return false;
+        }
         $sendEmail = config('scanners.clamav.send_email.enabled', false);
         if ($sendEmail) {
             $maxEmailSize = config('scanners.clamav.send_email.max_size', 128 * 1000); // 128 Kb
@@ -158,7 +181,7 @@ class ClamAV extends Scanner
                 $defName .= '.html';
             }
 
-            if (! $this->instreamSend($bodyPart->getBody(), $bodyPart->filename ?? $defName)) {
+            if (! $this->instreamSend($bodyPart->getBody(), $bodyPart->filename ?: $defName)) {
                 return false;
             }
         }
@@ -166,14 +189,18 @@ class ClamAV extends Scanner
         return true;
     }
 
-    private function instreamSend(string $body, string $filename)
+    private function instreamSend(string $body, string $filename): bool
     {
+        if (is_null($this->socket)) {
+            return false;
+        }
+
         debug("clamav: sending $filename");
         $this->reconnect();
 
         if (! $this->sendCommand("INSTREAM")) {
             $this->error = 'Unable to write to socket!';
-            if (config('app.debug', false)) {
+            if (config('app.debug', false) && ! is_null($this->socket)) {
                 $this->error .= ' ' . $this->socket->getLastError();
             }
 
@@ -210,6 +237,10 @@ class ClamAV extends Scanner
      */
     private function read(string $fileName = ''): bool
     {
+        if (is_null($this->socket)) {
+            return false;
+        }
+
         while (! empty($line = $this->socket->read(self::BYTES_RW))) {
             if (! empty($fileName)) {
                 $line = preg_replace('/.*:/', "$fileName:", $line, 1);
@@ -237,6 +268,10 @@ class ClamAV extends Scanner
 
     private function sendChunk(string $chunk): bool
     {
+        if (is_null($this->socket)) {
+            return false;
+        }
+
         try {
             $size = pack('N', strlen($chunk));
 
@@ -251,13 +286,21 @@ class ClamAV extends Scanner
         return true;
     }
 
-    private function sendCommand($command): bool
+    private function sendCommand(string $command): bool
     {
+        if (is_null($this->socket)) {
+            return false;
+        }
+
         return $this->socket->send("n{$command}\n") > 0;
     }
 
     private function endStream(): bool
     {
+        if (is_null($this->socket)) {
+            return false;
+        }
+
         return $this->socket->send(pack('N', 0)) > 0;
     }
 
@@ -265,7 +308,9 @@ class ClamAV extends Scanner
     {
         if (! isset($this->socket) || ! ($this->socket instanceof Socket)) {
             try {
-                $this->socket = app(Socket::class)->setDsn(config('scanners.clamav.socket', 'ipv4://127.0.0.1:3310'));
+                /** @var Socket $socket */
+                $socket = app(Socket::class);
+                $this->socket = $socket->setDsn(config('scanners.clamav.socket', 'ipv4://127.0.0.1:3310'));
             } catch (SocketException $e) {
                 unset($this->socket);
 
