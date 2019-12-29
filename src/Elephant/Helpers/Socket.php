@@ -16,6 +16,7 @@ class Socket
      * @param string $dsn ex. ipv4://127.0.0.1:10024 or unix://path/to/socket.sock
      * @uses self::connect()
      * @uses self::breakDsn
+     * @throws SocketException
      */
     public function __construct(string $dsn = '')
     {
@@ -24,11 +25,13 @@ class Socket
             $this->connect();
         }
     }
+
     /**
      * Set the DSN and connect. only works if not already connected.
      *
      * @param string $dsn ex. ipv4://127.0.0.1:10024 or unix://path/to/socket.sock
      * @return self
+     * @throws SocketException
      */
     public function setDsn(string $dsn): self
     {
@@ -105,7 +108,7 @@ class Socket
     /**
      * Set an option for the socket.
      *
-     * @param mixed $socket
+     * @param array option
      * @return void
      * @throws SocketException Unable to set option.
      */
