@@ -55,7 +55,7 @@
         "symfony/finder": "^4.3.4",
         "symfony/process": "^4.3.4",
         "symfony/var-dumper": "^4.3.4",
-        "vlucas/phpdotenv": "^3.3"
+        "ext-sockets": "*"
     },
     "replace": {
         "elephantmfa/foundation": "self.version",
