@@ -1,7 +1,7 @@
 <?php
 
-use Illuminate\Container\Container;
 use Illuminate\Support\Carbon;
+use Illuminate\Container\Container;
 
 if (! function_exists('app')) {
     /**
@@ -11,6 +11,7 @@ if (! function_exists('app')) {
      * @param array       $parameters
      *
      * @return mixed|\Illuminate\Contracts\Foundation\Application
+     * @throws \Illuminate\Contracts\Container\BindingResolutionException
      */
     function app($abstract = null, array $parameters = [])
     {
@@ -32,6 +33,7 @@ if (! function_exists('config')) {
      * @param mixed             $default
      *
      * @return mixed|\Illuminate\Config\Repository
+     * @throws \Illuminate\Contracts\Container\BindingResolutionException
      */
     function config($key = null, $default = null)
     {
@@ -43,7 +45,7 @@ if (! function_exists('config')) {
             return app('config')->set($key);
         }
 
-        return app('config')->get($key, $default);
+        return app()->config->get($key, $default);
     }
 }
 
@@ -54,6 +56,7 @@ if (! function_exists('info')) {
      * @param string $logMessage
      *
      * @return void
+     * @throws \Illuminate\Contracts\Container\BindingResolutionException
      */
     function info(?string $logMessage)
     {
@@ -63,7 +66,7 @@ if (! function_exists('info')) {
         }
         app('log')->info("$pid$logMessage");
         if (config('app.debug') && empty($pid)) {
-            echo '['.Carbon::now()."] $pid$logMessage\n";
+            echo '[' . Carbon::now() . "] $pid$logMessage\n";
         }
     }
 }
@@ -75,6 +78,7 @@ if (! function_exists('error')) {
      * @param string $logMessage
      *
      * @return void
+     * @throws \Illuminate\Contracts\Container\BindingResolutionException
      */
     function error(?string $logMessage)
     {
@@ -84,7 +88,7 @@ if (! function_exists('error')) {
         }
         app('log')->error("$pid$logMessage");
         if (config('app.debug') && empty($pid)) {
-            echo '['.Carbon::now()."]E $pid$logMessage\n";
+            echo '[' . Carbon::now() . "]E $pid$logMessage\n";
         }
     }
 }
@@ -96,20 +100,21 @@ if (! function_exists('debug')) {
      * @param string $logMessage
      *
      * @return void
+     * @throws \Illuminate\Contracts\Container\BindingResolutionException
      */
     function debug(?string $logMessage)
     {
         if (! config('app.debug')) {
             return;
         }
-        
+
         $pid = config('app.process_id') ?? '';
         if (! empty($pid)) {
             $pid = "[$pid] ";
         }
         app('log')->debug("$pid$logMessage");
         if (empty($pid)) {
-            echo '['.Carbon::now()."]D $pid$logMessage\n";
+            echo '[' . Carbon::now() . "]D $pid$logMessage\n";
         }
     }
 }
@@ -124,7 +129,7 @@ if (! function_exists('dd')) {
      */
     function dd($dump)
     {
-        die(var_export($dump, true)."\n");
+        die(var_export($dump, true) . "\n");
     }
 }
 
@@ -135,10 +140,11 @@ if (! function_exists('base_path')) {
      * @param string $path
      *
      * @return string
+     * @throws \Illuminate\Contracts\Container\BindingResolutionException
      */
     function base_path($path = '')
     {
-        return app('path.base').($path ? DIRECTORY_SEPARATOR.$path : $path);
+        return app('path.base') . ($path ? DIRECTORY_SEPARATOR . $path : $path);
     }
 }
 
@@ -149,10 +155,11 @@ if (! function_exists('storage_path')) {
      * @param string $path
      *
      * @return string
+     * @throws \Illuminate\Contracts\Container\BindingResolutionException
      */
     function storage_path($path = '')
     {
-        return app('path.storage').($path ? DIRECTORY_SEPARATOR.$path : $path);
+        return app('path.storage') . ($path ? DIRECTORY_SEPARATOR . $path : $path);
     }
 }
 
@@ -163,6 +170,7 @@ if (! function_exists('database_path')) {
      * @param string $path
      *
      * @return string
+     * @throws \Illuminate\Contracts\Container\BindingResolutionException
      */
     function database_path($path = '')
     {
@@ -182,13 +190,13 @@ if (! function_exists('validate_ip')) {
     function validate_ip(string $ip, bool $ipv6 = false): bool
     {
         if ($ipv6) {
-            $match = preg_match('/(\[[a-fA-F0-9:]{3,39}\])(:\d+)/', $ip, $matches);
+            $match = preg_match(/** @lang text */ '/(\[[a-fA-F0-9:]{3,39}\])(:\d+)/', $ip, $matches);
             if ($match === false) {
                 return false;
             }
             if (count($matches) > 0) {
                 [, $ip, $port] = $matches;
-                if (!is_int($port)) {
+                if (! is_int($port)) {
                     return false;
                 }
             }
@@ -201,7 +209,7 @@ if (! function_exists('validate_ip')) {
         if (substr_count($ip, ':') == 1) {
             // In this case, we are likely an IPv4 address with a port.
             [$ip, $port] = explode(':', $ip, 2);
-            if (!is_int($port)) {
+            if (! is_int($port)) {
                 return false;
             }
         }
@@ -224,7 +232,7 @@ if (! function_exists('fold_header')) {
         if (preg_match('/^(.{60,78})([\r\n\t\f\v ,;]+)(.+)$/', $headerVal, $matches)) {
             [, $p1, $sep, $p2] = $matches;
             $headerVal = $p1;
-            if (!empty(trim($sep))) {
+            if (! empty(trim($sep))) {
                 $headerVal .= $sep;
             }
             $headerVal .= "\n";

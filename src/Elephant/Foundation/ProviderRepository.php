@@ -3,8 +3,8 @@
 namespace Elephant\Foundation;
 
 use Exception;
-use Illuminate\Contracts\Foundation\Application as ApplicationContract;
 use Illuminate\Filesystem\Filesystem;
+use Illuminate\Contracts\Foundation\Application as ApplicationContract;
 
 class ProviderRepository
 {
@@ -84,6 +84,7 @@ class ProviderRepository
      * Load the service provider manifest JSON file.
      *
      * @return array|null
+     * @throws \Illuminate\Contracts\Filesystem\FileNotFoundException
      */
     public function loadManifest()
     {
@@ -113,30 +114,12 @@ class ProviderRepository
     }
 
     /**
-     * Register the load events for the given provider.
-     *
-     * @param string $provider
-     * @param array  $events
-     *
-     * @return void
-     */
-    protected function registerLoadEvents($provider, array $events)
-    {
-        if (count($events) < 1) {
-            return;
-        }
-
-        $this->app->make('events')->listen($events, function () use ($provider) {
-            $this->app->register($provider);
-        });
-    }
-
-    /**
      * Compile the application service manifest file.
      *
      * @param array $providers
      *
      * @return array
+     * @throws \Exception
      */
     protected function compileManifest($providers)
     {
@@ -181,29 +164,6 @@ class ProviderRepository
     }
 
     /**
-     * Write the service manifest file to disk.
-     *
-     * @param array $manifest
-     *
-     * @throws \Exception
-     *
-     * @return array
-     */
-    public function writeManifest($manifest)
-    {
-        if (!is_writable($dirname = dirname($this->manifestPath))) {
-            throw new Exception("The {$dirname} directory must be present and writable.");
-        }
-
-        $this->files->replace(
-            $this->manifestPath,
-            '<?php return '.var_export($manifest, true).';'
-        );
-
-        return array_merge(['when' => []], $manifest);
-    }
-
-    /**
      * Create a new provider instance.
      *
      * @param string $provider
@@ -213,5 +173,50 @@ class ProviderRepository
     public function createProvider($provider)
     {
         return new $provider($this->app);
+    }
+
+    /**
+     * Write the service manifest file to disk.
+     *
+     * @param array $manifest
+     *
+     * @return array
+     * @throws \Exception
+     *
+     */
+    public function writeManifest($manifest)
+    {
+        if (! is_writable($dirname = dirname($this->manifestPath))) {
+            throw new Exception("The {$dirname} directory must be present and writable.");
+        }
+
+        $this->files->replace(
+            $this->manifestPath,
+            '<?php return ' . var_export($manifest, true) . ';'
+        );
+
+        return array_merge(['when' => []], $manifest);
+    }
+
+    /**
+     * Register the load events for the given provider.
+     *
+     * @param string $provider
+     * @param array  $events
+     *
+     * @return void
+     * @throws \Illuminate\Contracts\Container\BindingResolutionException
+     */
+    protected function registerLoadEvents($provider, array $events)
+    {
+        if (count($events) < 1) {
+            return;
+        }
+
+        $this->app->make('events')->listen(
+            $events, function () use ($provider) {
+            $this->app->register($provider);
+        }
+        );
     }
 }
