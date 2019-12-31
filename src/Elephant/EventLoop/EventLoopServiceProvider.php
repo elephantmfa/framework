@@ -46,7 +46,7 @@ class EventLoopServiceProvider extends ServiceProvider
         $this->app->bind('server', function (Application $app, array $params) {
             /** @var Application&\ArrayAccess $app */
             $port = $params['port'];
-            if (!isset($port)) {
+            if (! isset($port)) {
                 throw new RuntimeException('No port provided to listen on.');
             }
             $server = new Server($port, $app['loop']);
@@ -82,6 +82,7 @@ class EventLoopServiceProvider extends ServiceProvider
                 $connection->on('data', function (string $data) use ($process) {
                     $process->stdin->write($data);
                 });
+
                 $process->stdout->on('data', function (string $data) use ($connection, $pid) {
                     $connection->write($data);
                     if (strpos($data, 'Goodbye') !== false) {
@@ -89,14 +90,17 @@ class EventLoopServiceProvider extends ServiceProvider
 
                         $connection->end();
 
+                        /** @var int $maxRequests */
                         $maxRequests = $this->app->config['app.processes.max_requests'] ?? 1000;
                         if ($this->app[ProcessManager::class]->processHandled > $maxRequests) {
                             $this->app[ProcessManager::class]->killProcess($pid);
                         }
                     }
                 });
-                $process->stderr->on('data', function (string $error) {
-                    error($error);
+                $process->stderr->on('data', function (string $error) use ($connection, $pid) {
+                    $connection->write($error);
+                    $connection->end();
+                    $this->app[ProcessManager::class]->killProcess($pid);
                 });
 
                 $connection->on('end', new EventLoopClose($app, $connection));

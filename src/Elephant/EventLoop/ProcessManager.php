@@ -4,6 +4,7 @@ namespace Elephant\EventLoop;
 
 use ArrayAccess;
 use Elephant\Contracts\EventLoop\ProcessManager as PMContract;
+use Exception;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -142,16 +143,21 @@ class ProcessManager implements PMContract, ArrayAccess
     /** {@inheritdoc} */
     public function killProcess(string $pid): bool
     {
-        $this->markBusy($pid);
-        foreach ($this->processes[$pid]->pipes as $pipe) {
-            $pipe->close();
+        $return = false;
+        try {
+            $this->markBusy($pid);
+            foreach ($this->processes[$pid]->pipes as $pipe) {
+                $pipe->close();
+            }
+
+            info("[$pid] Closing process...");
+
+            $return = $this->processes[$pid]->terminate();
+
+            unset($this->processes[$pid]);
+        } catch (Exception $e) {
+            //
         }
-
-        info("[$pid] Closing process...");
-
-        $return = $this->processes[$pid]->terminate();
-
-        unset($this->processes[$pid]);
 
         if (count($this->processes) < ($this->app->config['app.processes.min'] ?? 5)) {
             $this->createProcess();
