@@ -3,6 +3,7 @@
 namespace Elephant\Mail;
 
 use Elephant\Contracts\Mail\Mail;
+use Elephant\Helpers\Exceptions\SocketException;
 use Elephant\Helpers\Socket;
 use Elephant\Mail\Exceptions\TransportException;
 
@@ -97,35 +98,39 @@ class Transport
 
     private function deliver(string $ip, int $port): void
     {
-        $proto = 'ipv4://';
-        if (strpos($proto, ':') !== false) {
-            $proto = 'ipv6://';
-        }
-        $socket = new Socket("{$proto}{$ip}:{$port}");
-        $socket->send('EHLO ' . config('app.name') . "\r\n");
-        $helo = $socket->read(8192, PHP_BINARY_READ);
-        $this->processResp($helo, 'EHLO');
-        if (strpos($helo, 'XFORWARD') !== false) {
-            //@todo: send xforward
-        }
-        $socket->send("MAIL FROM: {$this->mail->getEnvelope()->sender}\r\n");
-        $this->processResp($socket->read(), 'MAIL FROM');
-        foreach ($this->mail->getEnvelope()->recipients as $recipient) {
-            $socket->send("RCPT TO: {$recipient}\r\n");
-            $this->processResp($socket->read(), 'RCPT TO');
-        }
-
-        $socket->send("DATA\r\n");
-        $this->processResp($socket->read(), 'DATA');
-        foreach (explode("\n", $this->mail->getRaw()) as $line) {
-            if (strpos($line, '.') === 0) {
-                $socket->send('.');
+        try {
+            $proto = 'ipv4://';
+            if (strpos($ip, ':') !== false) {
+                $proto = 'ipv6://';
             }
-            $socket->send("$line\r\n");
+            $socket = new Socket("{$proto}{$ip}:{$port}");
+            $socket->send('EHLO ' . config('app.name') . "\r\n");
+            $helo = $socket->read(8192, PHP_BINARY_READ);
+            $this->processResp($helo, 'EHLO');
+            if (strpos($helo, 'XFORWARD') !== false) {
+                //@todo: send xforward
+            }
+            $socket->send("MAIL FROM: {$this->mail->getEnvelope()->sender}\r\n");
+            $this->processResp($socket->read(), 'MAIL FROM');
+            foreach ($this->mail->getEnvelope()->recipients as $recipient) {
+                $socket->send("RCPT TO: {$recipient}\r\n");
+                $this->processResp($socket->read(), 'RCPT TO');
+            }
+
+            $socket->send("DATA\r\n");
+            $this->processResp($socket->read(), 'DATA');
+            foreach (explode("\n", $this->mail->getRaw()) as $line) {
+                if (strpos($line, '.') === 0) {
+                    $socket->send('.');
+                }
+                $socket->send("$line\r\n");
+            }
+            $socket->send("\r\n.\r\n");
+            $this->processResp($socket->read(), 'DATA');
+            $socket->close();
+        } catch (SocketException $e) {
+            throw new TransportException(500, 'CONNECT', "Unable to connect to {$ip}:{$port}");
         }
-        $socket->send("\r\n.\r\n");
-        $this->processResp($socket->read(), 'DATA');
-        $socket->close();
     }
 
     private function processResp(string $resp, string $stage): void
