@@ -5,15 +5,14 @@ namespace Elephant\Foundation\Exceptions;
 use Exception;
 use Illuminate\Support\Arr;
 use Psr\Log\LoggerInterface;
-use React\Socket\ConnectionInterface;
-use Elephant\Contracts\MailExceptionHandler;
 use Elephant\Helpers\Matchers\Regex;
+use React\Stream\WritableStreamInterface;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Symfony\Component\Console\Application as ConsoleApplication;
 use Illuminate\Contracts\Debug\ExceptionHandler as ExceptionHandlerContract;
 
-class Handler implements ExceptionHandlerContract, MailExceptionHandler
+class Handler implements ExceptionHandlerContract
 {
     /**
      * The container implementation.
@@ -98,15 +97,31 @@ class Handler implements ExceptionHandlerContract, MailExceptionHandler
     /** {@inheritdoc} */
     public function renderForConsole($output, Exception $e)
     {
-        (new ConsoleApplication)->renderException($e, $output);
+        try {
+            if ($this->container->mailcontext) {
+                $this->renderForMail($this->container->stdout, $e);
+
+                return;
+            }
+        } catch (Exception $e2) {
+            // Fall down to ConsoleApplication render.
+        }
+
+        (new ConsoleApplication)->renderThrowable($e, $output);
     }
 
-    /** {@inheritDoc} */
-    public function renderForMail(ConnectionInterface $connection, Exception $e): void
+    /**
+     * Render an exception to the console.
+     *
+     * @param \React\Stream\WritableStreamInterface $connection
+     * @param \Exception                            $e
+     * @return void
+     */
+    public function renderForMail(WritableStreamInterface $connection, Exception $e): void
     {
         $code = $e->getCode();
         if ($code < 400 || $code > 599) {
-            $code = config('relay.defer_on_exception', true) ? 450 : 550;
+            $code = $this->container->config['relay.defer_on_exception'] ?? true ? 450 : 550;
         }
 
         $advancedCode = '4.0.0 ';
@@ -116,14 +131,17 @@ class Handler implements ExceptionHandlerContract, MailExceptionHandler
 
 
         $response = "{$code} {$advancedCode}Server Configuration Error";
-        if (config('app.debug', false)) {
+        if ($this->container->config['app.debug'] ?? false) {
             if (Regex::match('/^\d\.\d\.\d\s+/', $e->getMessage())) {
                 $advancedCode = '';
             }
 
-            $response = "{$code} {$advancedCode}Server Configuration Error: {$e->getMessage()}";
+            $exceptionMessage = $e->getMessage();
+
+            $response = "{$code} {$advancedCode}Server Configuration Error: {$exceptionMessage}";
         }
 
-        $connection->write("$response\r\n");
+        error("Responded with: <$response> due to exception.");
+        fwrite(STDERR, "$response\r\n");
     }
 }

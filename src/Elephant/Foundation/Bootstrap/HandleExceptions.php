@@ -113,13 +113,7 @@ class HandleExceptions
      */
     protected function renderForConsole(Exception $e)
     {
-        /** @var \Elephant\Contracts\MailExceptionHandler&\Illuminate\Contracts\Debug\ExceptionHandler $handler */
-        $handler = $this->getExceptionHandler();
-        if (isset($this->app->mailcontext) && $this->app->mailcontext) {
-            $handler->renderForMail($this->app->stdout, $e);
-        } else {
-            $handler->renderForConsole(new ConsoleOutput(), $e);
-        }
+        $this->getExceptionHandler()->renderForConsole(new ConsoleOutput(), $e);
     }
 
     /**
