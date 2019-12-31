@@ -7,10 +7,10 @@ use Illuminate\Bus\Queueable;
 use Elephant\Contracts\Mail\Mail;
 use Illuminate\Pipeline\Pipeline;
 use Elephant\Foundation\Bus\Dispatchable;
-use Elephant\Filtering\Exception\DropException;
-use Elephant\Filtering\Exception\DeferException;
-use Elephant\Filtering\Exception\RejectException;
-use Elephant\Filtering\Exception\QuarantineException;
+use Elephant\Filtering\Actions\Drop;
+use Elephant\Filtering\Actions\Defer;
+use Elephant\Filtering\Actions\Reject;
+use Elephant\Filtering\Actions\Quarantine;
 
 class QueueProcessJob
 {
@@ -59,8 +59,8 @@ class QueueProcessJob
 
     /**
      * A wrapper for handle methods to DRY up each handle method.
-     * This will catch RejectException, DeferException, QuarantineException
-     * and DropException throws and will act upon them as necessary.
+     * This will catch Reject, Defer, Quarantine
+     * and Drop throws and will act upon them as necessary.
      *
      * @param callable $handleMethod
      *
@@ -70,13 +70,13 @@ class QueueProcessJob
     {
         try {
             $handleMethod();
-        } catch (RejectException $reject) {
+        } catch (Reject $reject) {
             $this->mail->setFinalDestination('reject');
-        } catch (DeferException $defer) {
+        } catch (Defer $defer) {
             $this->mail->setFinalDestination('defer');
-        } catch (QuarantineException $quarantine) {
+        } catch (Quarantine $quarantine) {
             $this->mail->setFinalDestination('quarantine');
-        } catch (DropException $drop) {
+        } catch (Drop $drop) {
             $this->mail->setFinalDestination('drop');
         }
     }

@@ -1,10 +1,10 @@
 <?php
 
-namespace Elephant\Filtering\Exception;
+namespace Elephant\Filtering\Actions;
 
 use Exception;
 
-class RejectException extends Exception
+class Defer extends Exception
 {
     /**
      * Create a new QuarantineException.
@@ -14,11 +14,11 @@ class RejectException extends Exception
      *
      * @return void
      */
-    public function __construct(string $message = 'Not ok', int $code = 550)
+    public function __construct(string $message = 'Try again later', int $code = 450)
     {
         $this->message = $message;
-        if ($code < 500) {
-            $code = 550;
+        if ($code < 400 || $code >= 500) {
+            $code = 450;
         }
         $this->code = $code;
     }

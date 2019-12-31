@@ -1,10 +1,10 @@
 <?php
 
-namespace Elephant\Filtering\Exception;
+namespace Elephant\Filtering\Actions;
 
 use Exception;
 
-class DropException extends Exception
+class Drop extends Exception
 {
     /**
      * Create a new QuarantineException.

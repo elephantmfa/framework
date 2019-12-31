@@ -11,10 +11,10 @@ use Illuminate\Pipeline\Pipeline;
 use Elephant\Mail\Jobs\QueueProcessJob;
 use Illuminate\Contracts\Container\Container;
 use Elephant\EventLoop\Traits\CommunicateTrait;
-use Elephant\Filtering\Exception\DropException;
-use Elephant\Filtering\Exception\DeferException;
-use Elephant\Filtering\Exception\RejectException;
-use Elephant\Filtering\Exception\QuarantineException;
+use Elephant\Filtering\Actions\Drop;
+use Elephant\Filtering\Actions\Defer;
+use Elephant\Filtering\Actions\Reject;
+use Elephant\Filtering\Actions\Quarantine;
 
 class EventLoopData
 {
@@ -527,16 +527,16 @@ class EventLoopData
     {
         try {
             $handleMethod();
-        } catch (RejectException $reject) {
+        } catch (Reject $reject) {
             $this->mail->setFinalDestination('reject');
             $this->say((string) $reject);
-        } catch (DeferException $defer) {
+        } catch (Defer $defer) {
             $this->mail->setFinalDestination('defer');
             $this->say((string) $defer);
-        } catch (QuarantineException $quarantine) {
+        } catch (Quarantine $quarantine) {
             $this->mail->setFinalDestination('quarantine');
             $this->say((string) $quarantine);
-        } catch (DropException $drop) {
+        } catch (Drop $drop) {
             if ($drop->getCode() >= 500) {
                 $this->close((string) $drop);
 
