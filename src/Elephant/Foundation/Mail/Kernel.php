@@ -2,9 +2,10 @@
 
 namespace Elephant\Foundation\Mail;
 
-use Elephant\Contracts\Mail\Kernel as KernelContract;
-use Elephant\EventLoop\Mail\EventLoopData;
+use Elephant\Contracts\Mail\Mail;
 use Elephant\Foundation\Application;
+use Elephant\EventLoop\Mail\EventLoopData;
+use Elephant\Contracts\Mail\Kernel as KernelContract;
 
 class Kernel implements KernelContract
 {
@@ -115,7 +116,7 @@ class Kernel implements KernelContract
     public function handle()
     {
         $this->app->instance('mailcontext', true);
-        $cb = new EventLoopData($this->app, $this->filters);
+        $cb = new EventLoopData($this->app, $this->filters, [$this, 'mailLog']);
         $this->app->stdin->on('data', function ($data) use ($cb) {
             $this->app->loop->cancelTimer($this->timeout);
             $this->timeout = $this->app->loop->addTimer(config('app.processes.timeout'), function () {
@@ -161,5 +162,16 @@ class Kernel implements KernelContract
     public function getApplication()
     {
         return $this->app;
+    }
+
+    /**
+     * A special filter used for logging out data about the mail.
+     *
+     * @param \Elephant\Contracts\Mail\Mail $mail
+     * @return \Elephant\Contracts\Mail\Mail
+     */
+    public function mailLog(Mail $mail): Mail
+    {
+        return $mail;
     }
 }

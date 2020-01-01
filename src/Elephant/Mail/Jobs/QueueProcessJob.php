@@ -2,14 +2,15 @@
 
 namespace Elephant\Mail\Jobs;
 
+use Elephant\Mail\Mail as M;
 use Elephant\Mail\Transport;
 use Illuminate\Bus\Queueable;
 use Elephant\Contracts\Mail\Mail;
 use Illuminate\Pipeline\Pipeline;
-use Elephant\Foundation\Bus\Dispatchable;
 use Elephant\Filtering\Actions\Drop;
 use Elephant\Filtering\Actions\Defer;
 use Elephant\Filtering\Actions\Reject;
+use Elephant\Foundation\Bus\Dispatchable;
 use Elephant\Filtering\Actions\Quarantine;
 
 class QueueProcessJob
@@ -26,13 +27,15 @@ class QueueProcessJob
      * Create a new job instance.
      *
      * @param \Elephant\Contracts\Mail\Mail $mail
-     * @param array<string,array> $filters
+     * @param array<string,array>           $filters
+     * @param callable                      $finalCb
      * @return void
      */
-    public function __construct(Mail $mail, array $filters)
+    public function __construct(Mail $mail, array $filters, $finalCb)
     {
         $this->mail = $mail;
         $this->filters = $filters;
+        $this->finalCb = $finalCb;
     }
 
     /**
@@ -42,6 +45,7 @@ class QueueProcessJob
      */
     public function handle()
     {
+        $time = microtime(true);
         $this->handleWrapper(function () {
             $this->mail = (new Pipeline(app()))
                 ->send($this->mail)
@@ -49,6 +53,9 @@ class QueueProcessJob
                 ->through($this->filters['queued'] ?? [])
                 ->thenReturn();
         });
+        $this->mail->addExtraData(M::TIMINGS, 'data', microtime(true) - $time);
+
+        $this->mail = call_user_func($this->finalCb, $this->mail);
 
         Transport::send($this->mail);
 

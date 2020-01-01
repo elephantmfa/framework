@@ -31,4 +31,12 @@ interface Kernel
      * @return \Illuminate\Contracts\Foundation\Application
      */
     public function getApplication();
+
+    /**
+     * A special filter used for logging out data about the mail.
+     *
+     * @param \Elephant\Contracts\Mail\Mail $mail
+     * @return \Elephant\Contracts\Mail\Mail
+     */
+    public function mailLog(Mail $mail, $next): Mail;
 }

@@ -48,20 +48,25 @@ class EventLoopData
      */
     private $readMode = false;
 
+    /** @var callable $finalCb */
+    private $finalCb;
+
     /**
      * Builds the event loop data invokable class.
      *
      * @param \Elephant\Foundation\Application $app
      * @param array                            $filters
+     * @param callable                         $finalCb
      *
      * @return void
      */
-    public function __construct(Container $app, array $filters)
+    public function __construct(Container $app, array $filters, $finalCb)
     {
         $this->app = $app;
         $this->filters = $filters;
         $this->readMode = false;
         $this->connection = $this->app->stdout;
+        $this->finalCb = $finalCb;
     }
 
     /**
@@ -484,10 +489,11 @@ class EventLoopData
 
         $queueProcess = $this->app['config']['relay.queue_processor'] ?? 'process';
         if ($queueProcess == 'process') {
-            QueueProcessJob::dispatchNow($this->mail, $this->filters);
+            QueueProcessJob::dispatchNow($this->mail, $this->filters, $this->finalCb);
         } elseif ($queueProcess == 'queue') {
-            QueueProcessJob::dispatch($this->mail, $this->filters);
+            QueueProcessJob::dispatch($this->mail, $this->filters, $this->finalCb);
         } else { // none
+            $this->mail = call_user_func($this->finalCb, $this->mail);
             Transport::send($this->mail);
         }
     }
