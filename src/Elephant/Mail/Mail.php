@@ -11,8 +11,8 @@ use Elephant\Contracts\Mail\Mail as MailContract;
 
 class Mail implements MailContract, Jsonable, Arrayable
 {
-    const TIMINGS = 1;
-    const SUPPLEMENTAL = 2;
+    const TIMINGS = 'timings';
+    const SUPPLEMENTAL = 'supplemental';
     /**
      * @var array<string,mixed> $supplementalData Data that can be assigned to,
      *  to store additional information about the mail.
@@ -524,7 +524,7 @@ class Mail implements MailContract, Jsonable, Arrayable
 
 
     /** {@inheritDoc} */
-    public function addExtraData(int $type, string $key, $data): void
+    public function addExtraData(string $type, string $key, $data): void
     {
         if ($type === 1) {
             $this->timings[$key] = $data;
@@ -536,7 +536,7 @@ class Mail implements MailContract, Jsonable, Arrayable
     }
 
     /** {@inheritDoc} */
-    public function getExtraData(int $type, string $key)
+    public function getExtraData(string $type, string $key)
     {
         if ($type === 1) {
             return $this->timings[$key];

@@ -332,23 +332,23 @@ interface Mail
     /**
      * Add extra data to the mail.
      *
-     * @param  int    $type Can be either "timing" (1) or "supplemental" (2).
+     * @param  string $type Can be either "timing" or "supplemental".
      * @param  string $key
      * @param  mixed  $data The data to set.
      * @return void
      *
      * @throws \InvalidArgumentException
      */
-    public function addExtraData(int $type, string $key, $data): void;
+    public function addExtraData(string $type, string $key, $data): void;
 
     /**
      * Get extra data.
      *
-     * @param  int    $type Can be either "timing" (1) or "supplemental" (2).
+     * @param  string $type Can be either "timing" or "supplemental".
      * @param  string $key
      * @return mixed
      *
      * @throws \InvalidArgumentException
      */
-    public function getExtraData(int $type, string $key);
+    public function getExtraData(string $type, string $key);
 }
